@@ -13,7 +13,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            PortalSeeder::class,
+            // PortalSeeder::class,
+            // SuperAdminSeeder::class,
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            RolePermissionSeeder::class,
+            AssignUserRolesSeeder::class,
         ]);
     }
 }
