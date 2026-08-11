@@ -52,6 +52,8 @@ class PermissionSeeder extends Seeder
                     'group' => 'Company Management',
                     'permissions' => [
                         ['View Companies', 'companies.view'],
+                        ['Create Companies', 'companies.create'],
+                        ['Update Companies', 'companies.update'],
                         ['Approve Companies', 'companies.approve'],
                         ['Reject Companies', 'companies.reject'],
                         ['Suspend Companies', 'companies.suspend'],

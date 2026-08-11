@@ -16,9 +16,9 @@ class DatabaseSeeder extends Seeder
             // PortalSeeder::class,
             // SuperAdminSeeder::class,
             PermissionSeeder::class,
-            RoleSeeder::class,
+            // RoleSeeder::class,
             RolePermissionSeeder::class,
-            AssignUserRolesSeeder::class,
+            // AssignUserRolesSeeder::class,
         ]);
     }
 }

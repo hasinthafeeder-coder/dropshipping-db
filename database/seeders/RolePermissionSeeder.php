@@ -42,6 +42,8 @@ class RolePermissionSeeder extends Seeder
             'suppliers.suspend',
 
             'companies.view',
+            'companies.create',
+            'companies.update',
             'companies.approve',
             'companies.reject',
             'companies.suspend',
@@ -85,8 +87,8 @@ class RolePermissionSeeder extends Seeder
         }
 
         if (is_numeric(reset($permissions))) {
-
-            $role->permissions()->sync($permissions);
+            app(\Feeder\Core\Authorization\Services\RolePermissionService::class)
+                ->sync($role, $permissions);
 
             return;
         }
@@ -96,6 +98,7 @@ class RolePermissionSeeder extends Seeder
             ->pluck('id')
             ->toArray();
 
-        $role->permissions()->sync($permissionIds);
+        app(\Feeder\Core\Authorization\Services\RolePermissionService::class)
+            ->sync($role, $permissionIds);
     }
 }
