@@ -80,6 +80,14 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Team',
+                    'group' => 'Team Structure',
+                    'permissions' => [
+                        ['View Team Structure', 'team.structure.view'],
+                    ],
+                ],
+
             ],
 
             'RESELLER' => [
@@ -89,6 +97,14 @@ class PermissionSeeder extends Seeder
                     'group' => 'Dashboard',
                     'permissions' => [
                         ['View Dashboard', 'dashboard.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Team',
+                    'group' => 'Team Structure',
+                    'permissions' => [
+                        ['View Team Structure', 'team.structure.view'],
                     ],
                 ],
 

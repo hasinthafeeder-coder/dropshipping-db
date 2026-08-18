@@ -51,6 +51,7 @@ class RolePermissionSeeder extends Seeder
             'roles.view',
 
             'permissions.view',
+            'team.structure.view',
         ]);
 
         /*
@@ -60,6 +61,7 @@ class RolePermissionSeeder extends Seeder
         */
         $this->syncPermissions('RESELLER', 'owner', [
             'dashboard.view',
+            'team.structure.view',
         ]);
 
         /*
