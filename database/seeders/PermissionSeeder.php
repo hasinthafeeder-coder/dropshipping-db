@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
                         ['Approve Resellers', 'resellers.approve'],
                         ['Reject Resellers', 'resellers.reject'],
                         ['Suspend Resellers', 'resellers.suspend'],
+                        ['Update Reseller Financial Settings', 'resellers.financial.update'],
                     ],
                 ],
 
@@ -85,6 +86,24 @@ class PermissionSeeder extends Seeder
                     'group' => 'Team Structure',
                     'permissions' => [
                         ['View Team Structure', 'team.structure.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Referral',
+                    'group' => 'Referral Management',
+                    'permissions' => [
+                        ['Activate Referral Link', 'referrals.activate'],
+                        ['Deactivate Referral Link', 'referrals.deactivate'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Settings',
+                    'group' => 'Financial Settings',
+                    'permissions' => [
+                        ['View Financial Settings', 'settings.view'],
+                        ['Update Financial Settings', 'settings.financial.update'],
                     ],
                 ],
 

@@ -35,6 +35,9 @@ class RolePermissionSeeder extends Seeder
             'resellers.approve',
             'resellers.reject',
             'resellers.suspend',
+            'resellers.financial.update',
+            'referrals.activate',
+            'referrals.deactivate',
 
             'suppliers.view',
             'suppliers.approve',
@@ -52,6 +55,8 @@ class RolePermissionSeeder extends Seeder
 
             'permissions.view',
             'team.structure.view',
+            'settings.view',
+            'settings.financial.update',
         ]);
 
         /*
