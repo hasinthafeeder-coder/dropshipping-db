@@ -99,6 +99,28 @@ class PermissionSeeder extends Seeder
                 ],
 
                 [
+                    'module' => 'Products',
+                    'group' => 'Product Categories',
+                    'permissions' => [
+                        ['View Product Categories', 'product_categories.view'],
+                        ['Create Product Categories', 'product_categories.create'],
+                        ['Update Product Categories', 'product_categories.update'],
+                        ['Delete Product Categories', 'product_categories.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
+                        ['Create Products', 'products.create'],
+                        ['Update Products', 'products.update'],
+                        ['Delete Products', 'products.delete'],
+                    ],
+                ],
+
+                [
                     'module' => 'Settings',
                     'group' => 'Financial Settings',
                     'permissions' => [
@@ -139,6 +161,17 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
+                        ['Create Products', 'products.create'],
+                        ['Update Products', 'products.update'],
+                        ['Delete Products', 'products.delete'],
+                    ],
+                ],
+ 
             ],
 
         ];

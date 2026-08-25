@@ -14,13 +14,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             // PortalSeeder::class,
-            // SuperAdminSeeder::class,
-            PermissionSeeder::class,
-            FinancialSettingsSeeder::class,
-            RoleSeeder::class,
-            RolePermissionSeeder::class,
-            AssignUserRolesSeeder::class,
-            // TeamTreeDummySeeder::class,
+            // RoleSeeder::class,
+            // PermissionSeeder::class,
+            // RolePermissionSeeder::class,
+            SupplierAccountSeeder::class,
+            // ProductCategorySeeder::class,
         ]);
     }
 }
