@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder
                         ['Reject Resellers', 'resellers.reject'],
                         ['Suspend Resellers', 'resellers.suspend'],
                         ['Update Reseller Financial Settings', 'resellers.financial.update'],
+                        ['Update Reseller Markets', 'resellers.markets.update'],
                         ['Assign Reseller Suppliers', 'resellers.suppliers.assign'],
                     ],
                 ],

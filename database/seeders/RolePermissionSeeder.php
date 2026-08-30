@@ -36,6 +36,7 @@ class RolePermissionSeeder extends Seeder
             'resellers.reject',
             'resellers.suspend',
             'resellers.financial.update',
+            'resellers.markets.update',
             'resellers.suppliers.assign',
             'referrals.activate',
             'referrals.deactivate',
