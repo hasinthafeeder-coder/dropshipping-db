@@ -173,7 +173,18 @@ class PermissionSeeder extends Seeder
                         ['Delete Products', 'products.delete'],
                     ],
                 ],
- 
+
+                [
+                    'module' => 'Inventory',
+                    'group' => 'GRNs',
+                    'permissions' => [
+                        ['View GRNs', 'grns.view'],
+                        ['Create GRNs', 'grns.create'],
+                        ['Update GRNs', 'grns.update'],
+                        ['Delete GRNs', 'grns.delete'],
+                    ],
+                ],
+
             ],
 
         ];
