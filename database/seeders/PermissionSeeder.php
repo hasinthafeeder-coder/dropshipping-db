@@ -123,6 +123,14 @@ class PermissionSeeder extends Seeder
                 ],
 
                 [
+                    'module' => 'Inventory',
+                    'group' => 'Stock',
+                    'permissions' => [
+                        ['View Stock', 'stock.view'],
+                    ],
+                ],
+
+                [
                     'module' => 'Settings',
                     'group' => 'Financial Settings',
                     'permissions' => [
@@ -148,6 +156,14 @@ class PermissionSeeder extends Seeder
                     'group' => 'Team Structure',
                     'permissions' => [
                         ['View Team Structure', 'team.structure.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
                     ],
                 ],
 
@@ -182,6 +198,14 @@ class PermissionSeeder extends Seeder
                         ['Create GRNs', 'grns.create'],
                         ['Update GRNs', 'grns.update'],
                         ['Delete GRNs', 'grns.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Inventory',
+                    'group' => 'Stock',
+                    'permissions' => [
+                        ['View Stock', 'stock.view'],
                     ],
                 ],
 

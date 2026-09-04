@@ -65,6 +65,7 @@ class RolePermissionSeeder extends Seeder
             'products.create',
             'products.update',
             'products.delete',
+            'stock.view',
             'settings.view',
             'settings.financial.update',
         ]);
@@ -77,6 +78,7 @@ class RolePermissionSeeder extends Seeder
         $this->syncPermissions('RESELLER', 'owner', [
             'dashboard.view',
             'team.structure.view',
+            'products.view',
         ]);
 
         /*
@@ -90,6 +92,11 @@ class RolePermissionSeeder extends Seeder
             'products.create',
             'products.update',
             'products.delete',
+            'grns.view',
+            'grns.create',
+            'grns.update',
+            'grns.delete',
+            'stock.view',
         ]);
     }
 

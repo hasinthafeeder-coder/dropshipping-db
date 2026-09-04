@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Feeder\Core\Enums\CompanyStatus;
 use Feeder\Core\Enums\PortalCode;
+use Feeder\Core\Enums\SupplierType;
 use Feeder\Core\Enums\UserStatus;
 use Feeder\Core\Enums\UserType;
 use Feeder\Core\Models\Company;
@@ -59,6 +60,10 @@ class SupplierAccountSeeder extends Seeder
             $lastName = 'Owner ' . $index;
             $nic = sprintf('SUP%06dV', $index);
 
+            $supplierType = (crc32($email) % 3 === 0)
+                ? SupplierType::PRO->value
+                : SupplierType::STANDARD->value;
+
             $company = Company::query()->firstOrCreate(
                 ['email' => $email],
                 [
@@ -70,6 +75,7 @@ class SupplierAccountSeeder extends Seeder
                     'registration_number' => 'SUP-' . str_pad((string) $index, 4, '0', STR_PAD_LEFT),
                     'tax_number' => 'TAX-' . str_pad((string) $index, 4, '0', STR_PAD_LEFT),
                     'status' => CompanyStatus::ACTIVE->value,
+                    'supplier_type' => $supplierType,
                     'approved_at' => now(),
                 ]
             );
