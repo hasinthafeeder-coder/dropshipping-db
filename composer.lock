@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1817cc1ae431aa6425a4349b83739560",
+    "content-hash": "1d3d9b37a978c2db0ea735a533cd92b2",
     "packages": [
         {
             "name": "brick/math",
@@ -510,16 +510,23 @@
         {
             "name": "feeder/core",
             "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/hasinthafeeder-coder/feeder-core.git",
+                "reference": "f4b6f38d84be177d205a39a2bd6cfe935997b017"
+            },
             "dist": {
-                "type": "path",
-                "url": "../feeder-core",
-                "reference": "940712a563875da55cbbcad5d0b3c3ca174db271"
+                "type": "zip",
+                "url": "https://api.github.com/repos/hasinthafeeder-coder/feeder-core/zipball/f4b6f38d84be177d205a39a2bd6cfe935997b017",
+                "reference": "f4b6f38d84be177d205a39a2bd6cfe935997b017",
+                "shasum": ""
             },
             "require": {
                 "illuminate/database": "^13.0",
                 "illuminate/support": "^13.0",
                 "php": "^8.3"
             },
+            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -537,10 +544,11 @@
                 "MIT"
             ],
             "description": "Shared business logic for the Feeder Dropshipping Platform",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/hasinthafeeder-coder/feeder-core/tree/main",
+                "issues": "https://github.com/hasinthafeeder-coder/feeder-core/issues"
+            },
+            "time": "2026-08-11T11:21:34+00:00"
         },
         {
             "name": "fruitcake/php-cors",
