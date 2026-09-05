@@ -13,12 +13,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            PortalSeeder::class,
-            SuperAdminSeeder::class,
+            // CountrySeeder::class,
+            // CurrencySeeder::class,
+            // MarketSeeder::class,
+            // MarketDefaultCompanyCommissionSeeder::class,
+            // PortalSeeder::class,
+            // RoleSeeder::class,
             PermissionSeeder::class,
-            RoleSeeder::class,
             RolePermissionSeeder::class,
-            AssignUserRolesSeeder::class,
+            // SupplierAccountSeeder::class,
+            // SriLankaMarketBackfillSeeder::class,
+            // ProductCategorySeeder::class,
         ]);
     }
 }

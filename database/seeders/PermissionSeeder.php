@@ -33,6 +33,9 @@ class PermissionSeeder extends Seeder
                         ['Approve Resellers', 'resellers.approve'],
                         ['Reject Resellers', 'resellers.reject'],
                         ['Suspend Resellers', 'resellers.suspend'],
+                        ['Update Reseller Financial Settings', 'resellers.financial.update'],
+                        ['Update Reseller Markets', 'resellers.markets.update'],
+                        ['Assign Reseller Suppliers', 'resellers.suppliers.assign'],
                     ],
                 ],
 
@@ -80,6 +83,62 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Team',
+                    'group' => 'Team Structure',
+                    'permissions' => [
+                        ['View Team Structure', 'team.structure.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Referral',
+                    'group' => 'Referral Management',
+                    'permissions' => [
+                        ['Activate Referral Link', 'referrals.activate'],
+                        ['Deactivate Referral Link', 'referrals.deactivate'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Product Categories',
+                    'permissions' => [
+                        ['View Product Categories', 'product_categories.view'],
+                        ['Create Product Categories', 'product_categories.create'],
+                        ['Update Product Categories', 'product_categories.update'],
+                        ['Delete Product Categories', 'product_categories.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
+                        ['Create Products', 'products.create'],
+                        ['Update Products', 'products.update'],
+                        ['Delete Products', 'products.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Inventory',
+                    'group' => 'Stock',
+                    'permissions' => [
+                        ['View Stock', 'stock.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Settings',
+                    'group' => 'Financial Settings',
+                    'permissions' => [
+                        ['View Financial Settings', 'settings.view'],
+                        ['Update Financial Settings', 'settings.financial.update'],
+                    ],
+                ],
+
             ],
 
             'RESELLER' => [
@@ -92,6 +151,22 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Team',
+                    'group' => 'Team Structure',
+                    'permissions' => [
+                        ['View Team Structure', 'team.structure.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
+                    ],
+                ],
+
             ],
 
             'SUPPLIER' => [
@@ -101,6 +176,36 @@ class PermissionSeeder extends Seeder
                     'group' => 'Dashboard',
                     'permissions' => [
                         ['View Dashboard', 'dashboard.view'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Products',
+                    'group' => 'Products',
+                    'permissions' => [
+                        ['View Products', 'products.view'],
+                        ['Create Products', 'products.create'],
+                        ['Update Products', 'products.update'],
+                        ['Delete Products', 'products.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Inventory',
+                    'group' => 'GRNs',
+                    'permissions' => [
+                        ['View GRNs', 'grns.view'],
+                        ['Create GRNs', 'grns.create'],
+                        ['Update GRNs', 'grns.update'],
+                        ['Delete GRNs', 'grns.delete'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Inventory',
+                    'group' => 'Stock',
+                    'permissions' => [
+                        ['View Stock', 'stock.view'],
                     ],
                 ],
 

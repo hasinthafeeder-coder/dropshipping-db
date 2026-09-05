@@ -35,6 +35,11 @@ class RolePermissionSeeder extends Seeder
             'resellers.approve',
             'resellers.reject',
             'resellers.suspend',
+            'resellers.financial.update',
+            'resellers.markets.update',
+            'resellers.suppliers.assign',
+            'referrals.activate',
+            'referrals.deactivate',
 
             'suppliers.view',
             'suppliers.approve',
@@ -51,6 +56,18 @@ class RolePermissionSeeder extends Seeder
             'roles.view',
 
             'permissions.view',
+            'team.structure.view',
+            'product_categories.view',
+            'product_categories.create',
+            'product_categories.update',
+            'product_categories.delete',
+            'products.view',
+            'products.create',
+            'products.update',
+            'products.delete',
+            'stock.view',
+            'settings.view',
+            'settings.financial.update',
         ]);
 
         /*
@@ -60,6 +77,8 @@ class RolePermissionSeeder extends Seeder
         */
         $this->syncPermissions('RESELLER', 'owner', [
             'dashboard.view',
+            'team.structure.view',
+            'products.view',
         ]);
 
         /*
@@ -69,6 +88,15 @@ class RolePermissionSeeder extends Seeder
         */
         $this->syncPermissions('SUPPLIER', 'owner', [
             'dashboard.view',
+            'products.view',
+            'products.create',
+            'products.update',
+            'products.delete',
+            'grns.view',
+            'grns.create',
+            'grns.update',
+            'grns.delete',
+            'stock.view',
         ]);
     }
 
