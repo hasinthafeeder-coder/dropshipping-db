@@ -513,12 +513,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/hasinthafeeder-coder/feeder-core.git",
-                "reference": "f4b6f38d84be177d205a39a2bd6cfe935997b017"
+                "reference": "abea6cabe68ffad6ab3e87ff0418a23c7a479c38"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hasinthafeeder-coder/feeder-core/zipball/f4b6f38d84be177d205a39a2bd6cfe935997b017",
-                "reference": "f4b6f38d84be177d205a39a2bd6cfe935997b017",
+                "url": "https://api.github.com/repos/hasinthafeeder-coder/feeder-core/zipball/abea6cabe68ffad6ab3e87ff0418a23c7a479c38",
+                "reference": "abea6cabe68ffad6ab3e87ff0418a23c7a479c38",
                 "shasum": ""
             },
             "require": {
@@ -548,7 +548,7 @@
                 "source": "https://github.com/hasinthafeeder-coder/feeder-core/tree/main",
                 "issues": "https://github.com/hasinthafeeder-coder/feeder-core/issues"
             },
-            "time": "2026-08-11T11:21:34+00:00"
+            "time": "2026-09-05T04:55:32+00:00"
         },
         {
             "name": "fruitcake/php-cors",
