@@ -48,6 +48,12 @@ class RoleSeeder extends Seeder
                 'slug' => 'staff',
                 'description' => 'Company staff.',
             ],
+            [
+                'portal' => 'RESELLER',
+                'name' => 'Call Center Agent',
+                'slug' => 'call-center-agent',
+                'description' => 'Standard employee role for reseller call center agents.',
+            ],
 
             // Supplier Portal
             [

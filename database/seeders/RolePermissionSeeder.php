@@ -79,6 +79,13 @@ class RolePermissionSeeder extends Seeder
             'dashboard.view',
             'team.structure.view',
             'products.view',
+            'call_center.agents.view',
+            'call_center.agents.create',
+            'call_center.agents.update',
+            'call_center.agents.activate',
+            'call_center.agents.deactivate',
+            'call_center.agents.commission.update',
+            'call_center.agents.permissions.update',
         ]);
 
         /*

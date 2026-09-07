@@ -167,6 +167,20 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Call Center',
+                    'group' => 'Agents',
+                    'permissions' => [
+                        ['View Call Center Agents', 'call_center.agents.view'],
+                        ['Create Call Center Agents', 'call_center.agents.create'],
+                        ['Update Call Center Agents', 'call_center.agents.update'],
+                        ['Activate Call Center Agents', 'call_center.agents.activate'],
+                        ['Deactivate Call Center Agents', 'call_center.agents.deactivate'],
+                        ['Update Call Center Agent Commission', 'call_center.agents.commission.update'],
+                        ['Update Call Center Agent Permissions', 'call_center.agents.permissions.update'],
+                    ],
+                ],
+
             ],
 
             'SUPPLIER' => [
