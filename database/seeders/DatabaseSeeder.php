@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             // SupplierAccountSeeder::class,
             // SriLankaMarketBackfillSeeder::class,
             // ProductCategorySeeder::class,
+            // Local/dev only — do not enable in production:
+            // DevelopmentCourierSeeder::class, // php artisan db:seed --class=DevelopmentCourierSeeder
         ]);
     }
 }

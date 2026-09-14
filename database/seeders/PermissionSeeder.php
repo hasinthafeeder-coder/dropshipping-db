@@ -139,6 +139,31 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Orders',
+                    'group' => 'Orders',
+                    'permissions' => [
+                        ['View Orders', 'orders.view'],
+                        ['Update Order Status', 'orders.status.update'],
+                        ['Bulk Delivery Update', 'orders.bulk-delivery-update'],
+                        ['Bulk Remind Orders Update', 'orders.bulk-remind-update'],
+                        ['Orders Overview', 'orders.overview'],
+                        ['Orders Overview Suppliers', 'orders.overview.suppliers'],
+                        ['Orders Overview Resellers', 'orders.overview.resellers'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Customers',
+                    'group' => 'Customers',
+                    'permissions' => [
+                        ['View Customer CRIB', 'customers.crib.view'],
+                        ['View Customer Bans', 'customers.bans.view'],
+                        ['Create Customer Bans', 'customers.bans.create'],
+                        ['Lift Customer Bans', 'customers.bans.lift'],
+                    ],
+                ],
+
             ],
 
             'RESELLER' => [
@@ -178,6 +203,32 @@ class PermissionSeeder extends Seeder
                         ['Deactivate Call Center Agents', 'call_center.agents.deactivate'],
                         ['Update Call Center Agent Commission', 'call_center.agents.commission.update'],
                         ['Update Call Center Agent Permissions', 'call_center.agents.permissions.update'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Orders',
+                    'group' => null,
+                    'permissions' => [
+                        ['View Orders', 'orders.view'],
+                        ['Create Orders', 'orders.create'],
+                        ['Update Orders', 'orders.update'],
+                        ['Update Order Status', 'orders.status.update'],
+                        ['Assign Order CCA', 'orders.cca.assign'],
+                        ['Create Order Comments', 'orders.comments.create'],
+                        ['Update Order Discount', 'orders.discount.update'],
+                        ['Book Order Shipment', 'orders.shipment.book'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Customers',
+                    'group' => 'Customers',
+                    'permissions' => [
+                        ['View Customers', 'customers.view'],
+                        ['View Customer Bans', 'customers.bans.view'],
+                        ['Create Customer Bans', 'customers.bans.create'],
+                        ['Lift Customer Bans', 'customers.bans.lift'],
                     ],
                 ],
 

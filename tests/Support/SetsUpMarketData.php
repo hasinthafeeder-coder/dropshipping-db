@@ -110,6 +110,20 @@ trait SetsUpMarketData
 
             $introducerBonusService->setIntroducerBonus($market, $amount);
         }
+
+        if (class_exists(\Feeder\Core\Services\Order\AfterHoursDeterminationService::class)) {
+            $afterHoursService = app(\Feeder\Core\Services\Order\AfterHoursDeterminationService::class);
+
+            foreach (\Feeder\Core\Services\Order\AfterHoursDeterminationService::MARKET_DEFAULTS as $marketCode => $amount) {
+                $market = Market::query()->where('code', $marketCode)->first();
+
+                if ($market === null || $afterHoursService->hasPenaltyAmount($market)) {
+                    continue;
+                }
+
+                $afterHoursService->setPenaltyAmount($market, $amount);
+            }
+        }
     }
 
     protected function seedMarketDefaultCommissions(): void

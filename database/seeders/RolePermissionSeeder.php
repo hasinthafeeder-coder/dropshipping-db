@@ -86,6 +86,18 @@ class RolePermissionSeeder extends Seeder
             'call_center.agents.deactivate',
             'call_center.agents.commission.update',
             'call_center.agents.permissions.update',
+            'orders.view',
+            'orders.create',
+            'orders.update',
+            'orders.status.update',
+            'orders.cca.assign',
+            'orders.comments.create',
+            'orders.discount.update',
+            'orders.shipment.book',
+            'customers.view',
+            'customers.bans.view',
+            'customers.bans.create',
+            'customers.bans.lift',
         ]);
 
         /*

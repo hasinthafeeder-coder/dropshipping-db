@@ -36,6 +36,7 @@ class MarketFinancialDefaultsSeeder extends Seeder
 
         $serviceChargeService = app(ResellerServiceChargeService::class);
         $introducerBonusService = app(IntroducerBonusService::class);
+        $afterHoursService = app(\Feeder\Core\Services\Order\AfterHoursDeterminationService::class);
 
         foreach ($serviceChargeDefaults as $marketCode => $amount) {
             $market = Market::query()->where('code', $marketCode)->first();
@@ -55,6 +56,16 @@ class MarketFinancialDefaultsSeeder extends Seeder
             }
 
             $introducerBonusService->setIntroducerBonus($market, $amount);
+        }
+
+        foreach (\Feeder\Core\Services\Order\AfterHoursDeterminationService::MARKET_DEFAULTS as $marketCode => $amount) {
+            $market = Market::query()->where('code', $marketCode)->first();
+
+            if ($market === null || $afterHoursService->hasPenaltyAmount($market)) {
+                continue;
+            }
+
+            $afterHoursService->setPenaltyAmount($market, $amount);
         }
     }
 }
