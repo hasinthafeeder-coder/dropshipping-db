@@ -21,11 +21,12 @@ class DatabaseSeeder extends Seeder
             // RoleSeeder::class,
             PermissionSeeder::class,
             RolePermissionSeeder::class,
+            RoyalExpressCourierSeeder::class,
+            TransExpressCourierSeeder::class,
+            FardarExpressCourierSeeder::class,
             // SupplierAccountSeeder::class,
             // SriLankaMarketBackfillSeeder::class,
             // ProductCategorySeeder::class,
-            // Local/dev only — do not enable in production:
-            // DevelopmentCourierSeeder::class, // php artisan db:seed --class=DevelopmentCourierSeeder
         ]);
     }
 }

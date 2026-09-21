@@ -45,6 +45,11 @@ class RolePermissionSeeder extends Seeder
             'suppliers.approve',
             'suppliers.reject',
             'suppliers.suspend',
+            'suppliers.courier_accounts.view',
+            'suppliers.courier_accounts.create',
+            'suppliers.courier_accounts.update',
+            'suppliers.courier_accounts.activate',
+            'suppliers.courier_accounts.test',
 
             'companies.view',
             'companies.create',
@@ -98,6 +103,24 @@ class RolePermissionSeeder extends Seeder
             'customers.bans.view',
             'customers.bans.create',
             'customers.bans.lift',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reseller Call Center Agent
+        |
+        | Operational order access only. Agents may create orders (auto-assigned
+        | to self), view company call-center / ongoing / archived lists, and
+        | update status / comments on orders assigned to them.
+        | Assignment, discount, and shipment booking stay owner-only.
+        |--------------------------------------------------------------------------
+        */
+        $this->syncPermissions('RESELLER', 'call-center-agent', [
+            'orders.view',
+            'orders.create',
+            'orders.update',
+            'orders.status.update',
+            'orders.comments.create',
         ]);
 
         /*

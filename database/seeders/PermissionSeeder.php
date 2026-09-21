@@ -47,6 +47,11 @@ class PermissionSeeder extends Seeder
                         ['Approve Suppliers', 'suppliers.approve'],
                         ['Reject Suppliers', 'suppliers.reject'],
                         ['Suspend Suppliers', 'suppliers.suspend'],
+                        ['View Supplier Courier Accounts', 'suppliers.courier_accounts.view'],
+                        ['Create Supplier Courier Accounts', 'suppliers.courier_accounts.create'],
+                        ['Update Supplier Courier Accounts', 'suppliers.courier_accounts.update'],
+                        ['Activate Supplier Courier Accounts', 'suppliers.courier_accounts.activate'],
+                        ['Test Supplier Courier Connections', 'suppliers.courier_accounts.test'],
                     ],
                 ],
 

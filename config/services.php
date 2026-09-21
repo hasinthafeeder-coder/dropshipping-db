@@ -35,4 +35,32 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Curfox (Royal Express) location master sync
+    |--------------------------------------------------------------------------
+    |
+    | Used by courier:sync-locations for provider-level state/city import.
+    | Never commit a real CURFOX_TOKEN value.
+    |
+    */
+    'curfox' => [
+        'base_url' => env('CURFOX_BASE_URL', 'https://v2-dashboards.api.curfox.com'),
+        'token' => env('CURFOX_TOKEN'),
+        'tenant' => env('CURFOX_TENANT', 'royalexpress'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | TransExpress location master sync
+    |--------------------------------------------------------------------------
+    |
+    | Used by courier:sync-locations for provider-level district/city import.
+    | Location endpoints currently require no authentication.
+    |
+    */
+    'transexpress' => [
+        'base_url' => env('TRANSEXPRESS_BASE_URL', 'https://portal.transexpress.lk/api'),
+    ],
+
 ];

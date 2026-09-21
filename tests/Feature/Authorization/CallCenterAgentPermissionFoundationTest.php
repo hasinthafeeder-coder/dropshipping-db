@@ -127,6 +127,30 @@ class CallCenterAgentPermissionFoundationTest extends TestCase
         }
     }
 
+    public function test_call_center_agent_role_has_default_operational_order_permissions(): void
+    {
+        $agentRole = $this->resellerRole('call-center-agent');
+        $agentSlugs = $agentRole->permissions()->pluck('slug')->all();
+
+        foreach ([
+            'orders.view',
+            'orders.create',
+            'orders.update',
+            'orders.status.update',
+            'orders.comments.create',
+        ] as $slug) {
+            $this->assertContains($slug, $agentSlugs, "Missing default CCA permission: {$slug}");
+        }
+
+        foreach ([
+            'orders.cca.assign',
+            'orders.discount.update',
+            'orders.shipment.book',
+        ] as $slug) {
+            $this->assertNotContains($slug, $agentSlugs, "CCA must not receive {$slug} by default.");
+        }
+    }
+
     public function test_manager_and_staff_do_not_receive_call_center_agent_management_permissions(): void
     {
         foreach (['manager', 'staff'] as $roleSlug) {
