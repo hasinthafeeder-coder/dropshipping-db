@@ -21,10 +21,10 @@ use Feeder\Core\Models\SupplierCourierAccount;
 use Feeder\Core\Models\User;
 use Feeder\Core\Services\Courier\CourierConnectionService;
 use Feeder\Core\Services\Courier\CourierCredentialSchemaRegistry;
-use Feeder\Core\Services\Courier\Curfox\CurfoxAuthService;
-use Feeder\Core\Services\Courier\Curfox\RoyalBookingAdapter;
-use Feeder\Core\Services\Courier\Curfox\RoyalCourierAccountSetupService;
 use Feeder\Core\Services\Courier\SupplierCourierAccountService;
+use Feeder\Core\Services\Courier\TransExpress\TransExpressAuthService;
+use Feeder\Core\Services\Courier\TransExpress\TransExpressBookingAdapter;
+use Feeder\Core\Services\Courier\TransExpress\TransExpressCourierAccountSetupService;
 use Feeder\Core\Services\Order\OrderShipmentLockService;
 use Feeder\Core\Services\Order\ShipmentBookingService;
 use Feeder\Core\Services\UuidService;
@@ -34,11 +34,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\SetsUpOrderFoundationData;
 use Tests\TestCase;
 
-class RoyalBookingIntegrationTest extends TestCase
+class TransExpressBookingIntegrationTest extends TestCase
 {
     use SetsUpOrderFoundationData;
 
@@ -54,11 +53,9 @@ class RoyalBookingIntegrationTest extends TestCase
             'database.connections.mysql.database' => 'dropshipping',
             'database.connections.mysql.username' => 'root',
             'database.connections.mysql.password' => 'admin',
-            'services.curfox.base_url' => 'https://v2-dashboards.api.curfox.com',
-            'services.curfox.tenant' => 'royalexpress',
-            'feeder.curfox.base_url' => 'https://v2-dashboards.api.curfox.com',
-            'feeder.curfox.tenant' => 'royalexpress',
-            'feeder.courier_booking_adapters.ROYAL' => RoyalBookingAdapter::class,
+            'services.transexpress.base_url' => 'https://portal.transexpress.lk/api',
+            'feeder.transexpress.base_url' => 'https://portal.transexpress.lk/api',
+            'feeder.courier_booking_adapters.TRANSEXPRESS' => TransExpressBookingAdapter::class,
         ]);
 
         DB::purge('mysql');
@@ -80,28 +77,22 @@ class RoyalBookingIntegrationTest extends TestCase
     public function test_login_success_saves_encrypted_token_and_hides_secrets(): void
     {
         Http::fake([
-            '*/api/public/merchant/login' => Http::response([
-                'message' => 'Login Successfully',
-                'user' => ['merchant_id' => '99', 'email' => 'a@example.com'],
-                'token' => 'royal-token-abc',
+            '*/api/login/client' => Http::response([
+                'token' => 'transexpress-token-abc',
+                'status' => 'success',
             ], 200),
         ]);
 
         $supplier = $this->makeSupplierUser();
-        $setup = $this->makeRoyalCourierLocations();
+        $setup = $this->makeTransExpressCourierLocations();
         $actorId = $this->makeAdminActor()->id;
 
-        $account = app(RoyalCourierAccountSetupService::class)->create($supplier, [
+        $account = app(TransExpressCourierAccountSetupService::class)->create($supplier, [
             'courier_id' => $setup['courier']->id,
-            'account_label' => 'ROYAL Primary',
+            'account_label' => 'TransExpress Primary',
             'credentials' => [
                 'email' => 'supplier-a@example.com',
                 'password' => 'secret-password',
-            ],
-            'meta' => [
-                'merchant_business_id' => '2',
-                'origin_state_id' => $setup['state']->id,
-                'origin_city_id' => $setup['originCity']->id,
             ],
             'is_default' => true,
         ], $actorId);
@@ -109,42 +100,34 @@ class RoyalBookingIntegrationTest extends TestCase
         $credentials = $account->getCredentials();
         $this->assertSame('supplier-a@example.com', $credentials['email']);
         $this->assertSame('secret-password', $credentials['password']);
-        $this->assertSame('royal-token-abc', $credentials['token']);
-        $this->assertSame('2', $account->meta_json['merchant_business_id']);
-        $this->assertSame('Colombo Suburbs', $account->meta_json['origin_state_name']);
-        $this->assertSame('Aggona', $account->meta_json['origin_city_name']);
+        $this->assertSame('transexpress-token-abc', $credentials['token']);
         $this->assertNotSame('secret-password', $account->credentials_encrypted);
 
         $presented = app(SupplierCourierAccountService::class)->presentAccount($account);
         $encoded = json_encode($presented);
         $this->assertStringNotContainsString('secret-password', $encoded);
-        $this->assertStringNotContainsString('royal-token-abc', $encoded);
+        $this->assertStringNotContainsString('transexpress-token-abc', $encoded);
         $this->assertSame('Configured', collect($presented['credential_display'])->firstWhere('key', 'token')['display']);
     }
 
     public function test_failed_login_does_not_create_account(): void
     {
         Http::fake([
-            '*/api/public/merchant/login' => Http::response([
+            '*/api/login/client' => Http::response([
                 'message' => 'Invalid credentials',
             ], 401),
         ]);
 
         $supplier = $this->makeSupplierUser();
-        $setup = $this->makeRoyalCourierLocations();
+        $setup = $this->makeTransExpressCourierLocations();
 
         try {
-            app(RoyalCourierAccountSetupService::class)->create($supplier, [
+            app(TransExpressCourierAccountSetupService::class)->create($supplier, [
                 'courier_id' => $setup['courier']->id,
                 'account_label' => 'Should Fail',
                 'credentials' => [
                     'email' => 'bad@example.com',
                     'password' => 'wrong',
-                ],
-                'meta' => [
-                    'merchant_business_id' => '2',
-                    'origin_state_id' => $setup['state']->id,
-                    'origin_city_id' => $setup['originCity']->id,
                 ],
             ], $this->makeAdminActor()->id);
 
@@ -156,39 +139,44 @@ class RoyalBookingIntegrationTest extends TestCase
         $this->assertSame(0, SupplierCourierAccount::query()->where('supplier_id', $supplier->id)->count());
     }
 
-    public function test_origin_city_must_belong_to_selected_state(): void
+    public function test_login_rejects_missing_token(): void
     {
         Http::fake([
-            '*/api/public/merchant/login' => Http::response([
-                'token' => 'token',
+            '*/api/login/client' => Http::response([
+                'status' => 'success',
             ], 200),
         ]);
 
-        $supplier = $this->makeSupplierUser();
-        $setup = $this->makeRoyalCourierLocations();
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('did not return a token');
 
-        $otherState = CourierState::query()->create([
-            'courier_id' => $setup['courier']->id,
-            'external_id' => 'state-other',
-            'name' => 'Other State',
-            'is_active' => true,
+        app(TransExpressAuthService::class)->login('a@example.com', 'secret');
+    }
+
+    public function test_login_rejects_malformed_json(): void
+    {
+        Http::fake([
+            '*/api/login/client' => Http::response('not-json', 200, ['Content-Type' => 'text/plain']),
         ]);
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(\RuntimeException::class);
 
-        app(RoyalCourierAccountSetupService::class)->create($supplier, [
-            'courier_id' => $setup['courier']->id,
-            'account_label' => 'Bad Origin',
-            'credentials' => [
-                'email' => 'a@example.com',
-                'password' => 'secret',
-            ],
-            'meta' => [
-                'merchant_business_id' => '2',
-                'origin_state_id' => $otherState->id,
-                'origin_city_id' => $setup['originCity']->id,
-            ],
-        ], $this->makeAdminActor()->id);
+        app(TransExpressAuthService::class)->login('a@example.com', 'secret');
+    }
+
+    public function test_login_http_error_maps_to_validation(): void
+    {
+        Http::fake([
+            '*/api/login/client' => Http::response(['message' => 'Server busy'], 500),
+        ]);
+
+        try {
+            app(TransExpressAuthService::class)->login('a@example.com', 'secret');
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('credentials', $e->errors());
+            $this->assertStringNotContainsString('secret', strtolower($e->errors()['credentials'][0]));
+        }
     }
 
     public function test_token_refresh_retries_booking_once_and_saves_new_token(): void
@@ -197,13 +185,16 @@ class RoyalBookingIntegrationTest extends TestCase
         $orderCalls = 0;
 
         Http::fake(function ($request) use (&$loginCalls, &$orderCalls) {
-            if (str_contains($request->url(), '/merchant/login')) {
+            if (str_contains($request->url(), '/login/client')) {
                 $loginCalls++;
 
-                return Http::response(['token' => 'fresh-token-'.$loginCalls], 200);
+                return Http::response([
+                    'token' => 'fresh-token-'.$loginCalls,
+                    'status' => 'success',
+                ], 200);
             }
 
-            if (str_contains($request->url(), '/merchant/order/single')) {
+            if (str_contains($request->url(), '/orders/upload/single-auto')) {
                 $orderCalls++;
 
                 if ($orderCalls === 1) {
@@ -215,15 +206,18 @@ class RoyalBookingIntegrationTest extends TestCase
                 $this->assertSame('Bearer fresh-token-1', $request->header('Authorization')[0] ?? null);
 
                 return Http::response([
-                    'message' => 'Orders Created Successfully',
-                    'data' => ['AU145'],
+                    'success' => 'Record successfully added',
+                    'order' => [
+                        'waybill_id' => 'BG243897',
+                        'order_no' => 75757575,
+                    ],
                 ], 200);
             }
 
             return Http::response(['message' => 'unexpected'], 500);
         });
 
-        $context = $this->makeBookableRoyalOrder(totalWeight: 2.3);
+        $context = $this->makeBookableTransExpressOrder(totalWeight: 2.3);
         $account = $context['account'];
         $account->setCredentials([
             'email' => 'supplier-a@example.com',
@@ -237,11 +231,11 @@ class RoyalBookingIntegrationTest extends TestCase
             $context['courier']->id,
             $context['service']->id,
             $context['destinationCity']->id,
-            app(RoyalBookingAdapter::class),
+            app(TransExpressBookingAdapter::class),
             $context['order']->reseller_id,
         );
 
-        $this->assertSame('AU145', $shipment->tracking_number);
+        $this->assertSame('BG243897', $shipment->tracking_number);
         $this->assertSame(1, $loginCalls);
         $this->assertSame(2, $orderCalls);
         $this->assertSame('fresh-token-1', $account->fresh()->getCredentials()['token']);
@@ -252,11 +246,14 @@ class RoyalBookingIntegrationTest extends TestCase
         $orderCalls = 0;
 
         Http::fake(function ($request) use (&$orderCalls) {
-            if (str_contains($request->url(), '/merchant/login')) {
-                return Http::response(['token' => 'still-bad'], 200);
+            if (str_contains($request->url(), '/login/client')) {
+                return Http::response([
+                    'token' => 'still-bad',
+                    'status' => 'success',
+                ], 200);
             }
 
-            if (str_contains($request->url(), '/merchant/order/single')) {
+            if (str_contains($request->url(), '/orders/upload/single-auto')) {
                 $orderCalls++;
 
                 return Http::response(['message' => 'Unauthenticated.'], 401);
@@ -265,7 +262,7 @@ class RoyalBookingIntegrationTest extends TestCase
             return Http::response(['message' => 'unexpected'], 500);
         });
 
-        $context = $this->makeBookableRoyalOrder();
+        $context = $this->makeBookableTransExpressOrder();
 
         try {
             app(ShipmentBookingService::class)->book(
@@ -273,7 +270,7 @@ class RoyalBookingIntegrationTest extends TestCase
                 $context['courier']->id,
                 $context['service']->id,
                 $context['destinationCity']->id,
-                app(RoyalBookingAdapter::class),
+                app(TransExpressBookingAdapter::class),
                 $context['order']->reseller_id,
             );
             $this->fail('Expected ValidationException');
@@ -285,20 +282,21 @@ class RoyalBookingIntegrationTest extends TestCase
         $this->assertDatabaseMissing('shipments', ['order_id' => $context['order']->id]);
     }
 
-    public function test_supplier_isolation_uses_own_royal_account(): void
+    public function test_supplier_isolation_uses_own_transexpress_account(): void
     {
         Http::fake(function ($request) {
-            if (str_contains($request->url(), '/merchant/login')) {
-                return Http::response(['token' => 'unused'], 200);
+            if (str_contains($request->url(), '/login/client')) {
+                return Http::response(['token' => 'unused', 'status' => 'success'], 200);
             }
 
-            if (str_contains($request->url(), '/merchant/order/single')) {
-                $payload = $request->data();
-                $this->assertSame('111', $payload['general_data']['merchant_business_id']);
+            if (str_contains($request->url(), '/orders/upload/single-auto')) {
                 $auth = $request->header('Authorization')[0] ?? '';
                 $this->assertSame('Bearer token-A', $auth);
 
-                return Http::response(['data' => ['WAYBILL-A']], 200);
+                return Http::response([
+                    'success' => 'Record successfully added',
+                    'order' => ['waybill_id' => 'WAYBILL-A'],
+                ], 200);
             }
 
             return Http::response(['message' => 'unexpected'], 500);
@@ -306,10 +304,10 @@ class RoyalBookingIntegrationTest extends TestCase
 
         $supplierA = $this->makeSupplierUser();
         $supplierB = $this->makeSupplierUser();
-        $locations = $this->makeRoyalCourierLocations();
+        $locations = $this->makeTransExpressCourierLocations();
 
-        $accountA = $this->makeRoyalAccount($supplierA, $locations, 'token-A', '111', 'a@example.com');
-        $this->makeRoyalAccount($supplierB, $locations, 'token-B', '222', 'b@example.com');
+        $accountA = $this->makeTransExpressAccount($supplierA, $locations, 'token-A', 'a@example.com');
+        $this->makeTransExpressAccount($supplierB, $locations, 'token-B', 'b@example.com');
 
         $order = $this->makeOrderForSupplier($supplierA, totalWeight: 1.0);
         $this->attachPricingAndService($locations['courier'], $order);
@@ -319,7 +317,7 @@ class RoyalBookingIntegrationTest extends TestCase
             $locations['courier']->id,
             $locations['service']->id,
             $locations['destinationCity']->id,
-            app(RoyalBookingAdapter::class),
+            app(TransExpressBookingAdapter::class),
             $order->reseller_id,
         );
 
@@ -327,33 +325,35 @@ class RoyalBookingIntegrationTest extends TestCase
         $this->assertSame($accountA->id, $shipment->supplier_courier_account_id);
     }
 
-    public function test_payload_uses_meta_origin_destination_fixed_booking_weight_and_order_total_cod(): void
+    public function test_payload_maps_order_fields_and_provider_city_id(): void
     {
         Http::fake(function ($request) {
-            if (str_contains($request->url(), '/merchant/order/single')) {
+            if (str_contains($request->url(), '/orders/upload/single-auto')) {
                 $payload = $request->data();
-                $orderData = $payload['order_data'][0];
 
-                $this->assertSame('2', $payload['general_data']['merchant_business_id']);
-                $this->assertSame('Aggona', $payload['general_data']['origin_city_name']);
-                $this->assertSame('Colombo Suburbs', $payload['general_data']['origin_state_name']);
-                $this->assertSame('Colombo 02', $orderData['destination_city_name']);
-                $this->assertSame('Colombo', $orderData['destination_state_name']);
-                $this->assertSame(1, $orderData['weight']);
-                $this->assertArrayNotHasKey('waybill_number', $orderData);
-                $this->assertIsInt($orderData['cod']);
-                // Fee still uses real order weight: first kg 700 + ceil(2.3-1)=2 * 200 = 1100; COD = 500 + 1100
-                $this->assertSame(1600, $orderData['cod']);
-                $this->assertNotEmpty($orderData['order_no']);
-                $this->assertStringContainsString('Fragile Serum', $orderData['description']);
+                $this->assertSame(75757575, $payload['order_no']);
+                $this->assertSame('John Doe', $payload['customer_name']);
+                $this->assertSame('Address line 1, Address line 2, Address line 3', $payload['address']);
+                $this->assertStringContainsString('Fragile Serum', $payload['description']);
+                $this->assertSame('0794535345', $payload['phone_no']);
+                $this->assertSame('0792445546', $payload['phone_no2']);
+                $this->assertSame(864, $payload['city_id']);
+                $this->assertIsInt($payload['cod']);
+                // Fee: first kg 650 + ceil(2.3-1)=2 * 150 = 950; COD = 500 + 950
+                $this->assertSame(1450, $payload['cod']);
+                $this->assertArrayNotHasKey('destination_city_name', $payload);
+                $this->assertSame('Bearer valid-token', $request->header('Authorization')[0] ?? null);
 
-                return Http::response(['data' => ['AU999']], 200);
+                return Http::response([
+                    'success' => 'Record successfully added',
+                    'order' => ['waybill_id' => 'BG999'],
+                ], 200);
             }
 
             return Http::response(['message' => 'unexpected'], 500);
         });
 
-        $context = $this->makeBookableRoyalOrder(
+        $context = $this->makeBookableTransExpressOrder(
             totalWeight: 2.3,
             itemsSubtotal: 500,
             productName: 'Fragile Serum',
@@ -364,130 +364,35 @@ class RoyalBookingIntegrationTest extends TestCase
             $context['courier']->id,
             $context['service']->id,
             $context['destinationCity']->id,
-            app(RoyalBookingAdapter::class),
+            app(TransExpressBookingAdapter::class),
             $context['order']->reseller_id,
         );
 
-        $this->assertSame('AU999', $shipment->tracking_number);
+        $this->assertSame('BG999', $shipment->tracking_number);
         $this->assertSame(ShipmentStatus::BOOKED, $shipment->status);
         $this->assertTrue($context['order']->fresh(['shipment'])->hasBookedShipment());
-        $this->assertSame(2.3, (float) $shipment->weight_snapshot);
-        $this->assertSame(2.3, (float) $context['order']->fresh()->total_weight);
 
         $this->expectException(ValidationException::class);
         app(OrderShipmentLockService::class)->assertShipmentMutable($context['order']->fresh(['shipment']));
     }
 
-    #[DataProvider('fixedBookingWeightCases')]
-    public function test_courier_api_weight_is_always_fixed_one_kg_regardless_of_order_weight(
-        float $orderWeightKg,
-    ): void {
-        Http::fake(function ($request) {
-            if (str_contains($request->url(), '/merchant/order/single')) {
-                $payload = $request->data();
-                $this->assertSame(1, $payload['order_data'][0]['weight']);
-
-                return Http::response(['data' => ['AU-WEIGHT']], 200);
-            }
-
-            return Http::response(['message' => 'unexpected'], 500);
-        });
-
-        $context = $this->makeBookableRoyalOrder(totalWeight: $orderWeightKg);
-
-        $shipment = app(ShipmentBookingService::class)->book(
-            $context['order'],
-            $context['courier']->id,
-            $context['service']->id,
-            $context['destinationCity']->id,
-            app(RoyalBookingAdapter::class),
-            $context['order']->reseller_id,
-        );
-
-        $this->assertSame('AU-WEIGHT', $shipment->tracking_number);
-        $this->assertSame($orderWeightKg, (float) $shipment->weight_snapshot);
-        $this->assertSame($orderWeightKg, (float) $context['order']->fresh()->total_weight);
-    }
-
-    /**
-     * @return array<string, array{0: float}>
-     */
-    public static function fixedBookingWeightCases(): array
-    {
-        return [
-            '0.5 kg order' => [0.5],
-            '1 kg order' => [1.0],
-            '5 kg order' => [5.0],
-        ];
-    }
-
-    public function test_payload_uses_linked_royal_state_name_not_stale_district_name(): void
-    {
-        Http::fake(function ($request) {
-            if (str_contains($request->url(), '/merchant/order/single')) {
-                $payload = $request->data();
-                $orderData = $payload['order_data'][0];
-
-                $this->assertSame('Colombo 02', $orderData['destination_city_name']);
-                $this->assertSame('Colombo', $orderData['destination_state_name']);
-                $this->assertArrayNotHasKey('destination_city_id', $orderData);
-                $this->assertArrayNotHasKey('city_id', $orderData);
-
-                return Http::response(['data' => ['AU-STATE']], 200);
-            }
-
-            return Http::response(['message' => 'unexpected'], 500);
-        });
-
-        $context = $this->makeBookableRoyalOrder();
-        $context['destinationCity']->district_name = 'Wrong District';
-        $context['destinationCity']->save();
-
-        $shipment = app(ShipmentBookingService::class)->book(
-            $context['order'],
-            $context['courier']->id,
-            $context['service']->id,
-            $context['destinationCity']->id,
-            app(RoyalBookingAdapter::class),
-            $context['order']->reseller_id,
-        );
-
-        $this->assertSame('AU-STATE', $shipment->tracking_number);
-        $this->assertSame((int) $context['destinationCity']->id, (int) $shipment->courier_city_id);
-    }
-
-    public function test_rate_card_and_validation_errors_do_not_retry_or_create_shipment(): void
+    public function test_provider_validation_error_is_normalized(): void
     {
         $orderCalls = 0;
 
         Http::fake(function ($request) use (&$orderCalls) {
-            if (str_contains($request->url(), '/merchant/order/single')) {
+            if (str_contains($request->url(), '/orders/upload/single-auto')) {
                 $orderCalls++;
 
-                $payload = $request->data();
-                $orderData = $payload['order_data'][0] ?? [];
-
-                // Preserve name-based booking; provider city IDs are stored but not sent.
-                $this->assertArrayHasKey('origin_city_name', $payload['general_data']);
-                $this->assertArrayNotHasKey('origin_city_id', $payload['general_data']);
-                $this->assertArrayHasKey('destination_city_name', $orderData);
-                $this->assertArrayNotHasKey('destination_city_id', $orderData);
-
-                // Live Curfox shape for missing merchant rate-card coverage.
                 return Http::response([
-                    'message' => 'The given data was invalid.',
-                    'errors' => [
-                        'rate_card.destination_city_id' => [
-                            'There is no rate card assigned to you with the following city combination - Nugegoda to Dehiwala!',
-                        ],
-                    ],
+                    'message' => 'The city_id field is invalid.',
                 ], 422);
             }
 
             return Http::response(['message' => 'unexpected'], 500);
         });
 
-        $context = $this->makeBookableRoyalOrder();
+        $context = $this->makeBookableTransExpressOrder();
 
         try {
             app(ShipmentBookingService::class)->book(
@@ -495,35 +400,59 @@ class RoyalBookingIntegrationTest extends TestCase
                 $context['courier']->id,
                 $context['service']->id,
                 $context['destinationCity']->id,
-                app(RoyalBookingAdapter::class),
+                app(TransExpressBookingAdapter::class),
                 $context['order']->reseller_id,
             );
-            $this->fail('Expected ValidationException');
+            $this->fail('Expected CourierProviderBookingException');
         } catch (CourierProviderBookingException $e) {
             $this->assertSame('http_error', $e->debug['failure_type']);
             $this->assertSame(422, $e->debug['http_status']);
-            $this->assertSame(
-                'There is no rate card assigned to you with the following city combination - Nugegoda to Dehiwala!',
-                $e->debug['response']['errors']['rate_card.destination_city_id'][0] ?? null,
-            );
-            $this->assertStringContainsString('The given data was invalid.', $e->errors()['booking'][0]);
+            $this->assertStringContainsString('city_id field is invalid', $e->errors()['booking'][0]);
             $this->assertStringNotContainsString('token', strtolower($e->errors()['booking'][0]));
         }
 
         $this->assertSame(1, $orderCalls);
         $this->assertDatabaseMissing('shipments', ['order_id' => $context['order']->id]);
-        $this->assertFalse($context['order']->fresh(['shipment'])->hasBookedShipment());
+    }
+
+    public function test_provider_500_error_is_normalized(): void
+    {
+        Http::fake([
+            '*/orders/upload/single-auto' => Http::response(['message' => 'Upstream failure'], 500),
+        ]);
+
+        $context = $this->makeBookableTransExpressOrder();
+
+        try {
+            app(ShipmentBookingService::class)->book(
+                $context['order'],
+                $context['courier']->id,
+                $context['service']->id,
+                $context['destinationCity']->id,
+                app(TransExpressBookingAdapter::class),
+                $context['order']->reseller_id,
+            );
+            $this->fail('Expected CourierProviderBookingException for 500');
+        } catch (CourierProviderBookingException $e) {
+            $this->assertSame(500, $e->debug['http_status']);
+            $this->assertStringNotContainsString('token', strtolower($e->errors()['booking'][0]));
+        }
+
+        $this->assertDatabaseMissing('shipments', ['order_id' => $context['order']->id]);
     }
 
     public function test_connection_test_refreshes_token_without_exposing_secrets(): void
     {
         Http::fake([
-            '*/api/public/merchant/login' => Http::response(['token' => 'rotated-token'], 200),
+            '*/api/login/client' => Http::response([
+                'token' => 'rotated-token',
+                'status' => 'success',
+            ], 200),
         ]);
 
         $supplier = $this->makeSupplierUser();
-        $locations = $this->makeRoyalCourierLocations();
-        $account = $this->makeRoyalAccount($supplier, $locations, 'old-token', '2', 'conn@example.com');
+        $locations = $this->makeTransExpressCourierLocations();
+        $account = $this->makeTransExpressAccount($supplier, $locations, 'old-token', 'conn@example.com');
 
         $result = app(CourierConnectionService::class)->testAccount($account);
 
@@ -533,33 +462,32 @@ class RoyalBookingIntegrationTest extends TestCase
         $this->assertSame('rotated-token', $account->fresh()->getCredentials()['token']);
     }
 
-    public function test_credential_schema_exposes_email_password_not_global_url(): void
+    public function test_credential_schema_exposes_email_password_not_token_or_url(): void
     {
-        $schema = app(CourierCredentialSchemaRegistry::class)->forCode('ROYAL');
+        $schema = app(CourierCredentialSchemaRegistry::class)->forCode('TRANSEXPRESS');
         $keys = array_map(static fn ($field) => $field->key, $schema->fields());
 
         $this->assertSame(['email', 'password'], $keys);
         $this->assertNotContains('base_url', $keys);
-        $this->assertNotContains('tenant', $keys);
         $this->assertNotContains('token', $keys);
     }
 
-    public function test_auth_service_does_not_infer_merchant_business_id_from_login(): void
+    public function test_auth_service_requires_success_status_and_token(): void
     {
         Http::fake([
-            '*/api/public/merchant/login' => Http::response([
+            '*/api/login/client' => Http::response([
                 'token' => 'tok',
-                'user' => ['merchant_id' => 'should-not-be-used'],
+                'status' => 'success',
             ], 200),
         ]);
 
-        $token = app(CurfoxAuthService::class)->login('a@example.com', 'secret');
+        $token = app(TransExpressAuthService::class)->login('a@example.com', 'secret');
         $this->assertSame('tok', $token);
 
         Http::assertSent(function ($request) {
-            return str_contains($request->url(), '/merchant/login')
-                && $request->hasHeader('X-tenant', 'royalexpress')
-                && ($request->data()['email'] ?? null) === 'a@example.com';
+            return str_contains($request->url(), '/login/client')
+                && ($request->data()['email'] ?? null) === 'a@example.com'
+                && ! $request->hasHeader('Authorization');
         });
     }
 
@@ -568,17 +496,16 @@ class RoyalBookingIntegrationTest extends TestCase
      *     courier: Courier,
      *     service: CourierService,
      *     state: CourierState,
-     *     originCity: CourierCity,
      *     destinationCity: CourierCity
      * }
      */
-    private function makeRoyalCourierLocations(): array
+    private function makeTransExpressCourierLocations(): array
     {
         $courier = Courier::query()->updateOrCreate(
-            ['code' => 'ROYAL'],
+            ['code' => 'TRANSEXPRESS'],
             [
                 'uuid' => (string) Str::uuid(),
-                'name' => 'Royal Express',
+                'name' => 'TransExpress',
                 'is_active' => true,
             ]
         );
@@ -588,22 +515,13 @@ class RoyalBookingIntegrationTest extends TestCase
             [
                 'uuid' => (string) Str::uuid(),
                 'name' => 'Standard',
-                'external_service_id' => 'royal-standard',
+                'external_service_id' => 'transexpress-standard',
                 'is_active' => true,
             ]
         );
 
         $state = CourierState::query()->updateOrCreate(
-            ['courier_id' => $courier->id, 'external_id' => 'royal-state-1'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Colombo Suburbs',
-                'is_active' => true,
-            ]
-        );
-
-        $destState = CourierState::query()->updateOrCreate(
-            ['courier_id' => $courier->id, 'external_id' => 'royal-state-2'],
+            ['courier_id' => $courier->id, 'external_id' => '5'],
             [
                 'uuid' => (string) Str::uuid(),
                 'name' => 'Colombo',
@@ -611,30 +529,16 @@ class RoyalBookingIntegrationTest extends TestCase
             ]
         );
 
-        $originCity = CourierCity::query()->updateOrCreate(
-            ['courier_id' => $courier->id, 'external_id' => 'royal-city-origin'],
+        $destinationCity = CourierCity::query()->updateOrCreate(
+            ['courier_id' => $courier->id, 'external_id' => '864'],
             [
                 'uuid' => (string) Str::uuid(),
                 'courier_state_id' => $state->id,
-                'name' => 'Aggona',
-                'city_name' => 'Aggona',
-                'district_name' => 'Colombo Suburbs',
-                'external_city_code' => 'royal-city-origin',
-                'external_district_code' => 'royal-state-1',
-                'is_active' => true,
-            ]
-        );
-
-        $destinationCity = CourierCity::query()->updateOrCreate(
-            ['courier_id' => $courier->id, 'external_id' => 'royal-city-dest'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'courier_state_id' => $destState->id,
-                'name' => 'Colombo 02',
-                'city_name' => 'Colombo 02',
+                'name' => 'Sample City',
+                'city_name' => 'Sample City',
                 'district_name' => 'Colombo',
-                'external_city_code' => 'royal-city-dest',
-                'external_district_code' => 'royal-state-2',
+                'external_city_code' => '864',
+                'external_district_code' => '5',
                 'is_active' => true,
             ]
         );
@@ -643,7 +547,6 @@ class RoyalBookingIntegrationTest extends TestCase
             'courier' => $courier,
             'service' => $service,
             'state' => $state,
-            'originCity' => $originCity,
             'destinationCity' => $destinationCity,
         ];
     }
@@ -653,33 +556,25 @@ class RoyalBookingIntegrationTest extends TestCase
      *     courier: Courier,
      *     service: CourierService,
      *     state: CourierState,
-     *     originCity: CourierCity,
      *     destinationCity: CourierCity
      * }  $locations
      */
-    private function makeRoyalAccount(
+    private function makeTransExpressAccount(
         $supplier,
         array $locations,
         string $token,
-        string $merchantBusinessId,
         string $email,
     ): SupplierCourierAccount {
         return SupplierCourierAccount::query()->create([
             'supplier_id' => $supplier->id,
             'courier_id' => $locations['courier']->id,
-            'account_label' => 'ROYAL '.$email,
+            'account_label' => 'TransExpress '.$email,
             'credentials_encrypted' => Crypt::encryptString(json_encode([
                 'email' => $email,
                 'password' => 'secret-password',
                 'token' => $token,
             ], JSON_THROW_ON_ERROR)),
-            'meta_json' => [
-                'merchant_business_id' => $merchantBusinessId,
-                'origin_state_id' => $locations['state']->id,
-                'origin_city_id' => $locations['originCity']->id,
-                'origin_state_name' => 'Colombo Suburbs',
-                'origin_city_name' => 'Aggona',
-            ],
+            'meta_json' => null,
             'is_active' => true,
             'is_default' => true,
         ]);
@@ -694,14 +589,14 @@ class RoyalBookingIntegrationTest extends TestCase
      *     account: SupplierCourierAccount
      * }
      */
-    private function makeBookableRoyalOrder(
+    private function makeBookableTransExpressOrder(
         float $totalWeight = 1.5,
         float $itemsSubtotal = 500,
         string $productName = 'Product Snapshot',
     ): array {
-        $locations = $this->makeRoyalCourierLocations();
+        $locations = $this->makeTransExpressCourierLocations();
         $supplier = $this->makeSupplierUser();
-        $account = $this->makeRoyalAccount($supplier, $locations, 'valid-token', '2', 'book@example.com');
+        $account = $this->makeTransExpressAccount($supplier, $locations, 'valid-token', 'book@example.com');
         $order = $this->makeOrderForSupplier($supplier, $totalWeight, $itemsSubtotal, $productName);
         $this->attachPricingAndService($locations['courier'], $order);
 
@@ -795,8 +690,8 @@ class RoyalBookingIntegrationTest extends TestCase
             [
                 'uuid' => (string) Str::uuid(),
                 'currency_id' => $order->currency_id,
-                'first_kg_fee' => 700,
-                'additional_kg_fee' => 200,
+                'first_kg_fee' => 650,
+                'additional_kg_fee' => 150,
                 'is_active' => true,
             ]
         );
@@ -806,7 +701,7 @@ class RoyalBookingIntegrationTest extends TestCase
     {
         return User::query()->create([
             'uuid' => UuidService::generate(),
-            'email' => 'admin-royal-'.Str::lower(Str::random(6)).'@feeder.local',
+            'email' => 'admin-te-'.Str::lower(Str::random(6)).'@feeder.local',
             'phone' => '070'.random_int(1000000, 9999999),
             'password' => Hash::make('password'),
             'user_type' => UserType::SUPER_ADMIN->value,

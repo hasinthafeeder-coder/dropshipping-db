@@ -155,6 +155,9 @@ class PermissionSeeder extends Seeder
                         ['Orders Overview', 'orders.overview'],
                         ['Orders Overview Suppliers', 'orders.overview.suppliers'],
                         ['Orders Overview Resellers', 'orders.overview.resellers'],
+                        ['Review Order Payments', 'orders.payment.review'],
+                        ['Approve Order Payments', 'orders.payment.approve'],
+                        ['Reject Order Payments', 'orders.payment.reject'],
                     ],
                 ],
 

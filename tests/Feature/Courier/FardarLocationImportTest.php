@@ -53,57 +53,136 @@ class FardarLocationImportTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_import_creates_fardar_district_and_city(): void
+    public function test_district_mapping_shares_one_state_across_cities(): void
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
+            ['2', '6 Kanuwa', '3', 'Outstation', '6', 'Galle'],
+            ['3', 'Adadola', '3', 'Outstation', '6', 'Galle'],
         ]);
 
         $result = $this->sync->importFromCsv($courier, $path);
 
         $this->assertSame(0, $result->errors);
         $this->assertSame(1, $result->statesCreated);
-        $this->assertSame(1, $result->citiesCreated);
-        $this->assertDatabaseHas('courier_states', [
-            'courier_id' => $courier->id,
-            'external_id' => '5',
-            'name' => 'Colombo',
-            'is_active' => 1,
-        ]);
-        $this->assertDatabaseHas('courier_cities', [
-            'courier_id' => $courier->id,
-            'external_id' => '1',
-            'name' => 'Akarawita',
-            'city_name' => 'Akarawita',
-            'district_name' => 'Colombo',
-            'external_city_code' => '1',
-            'external_district_code' => '5',
-            'is_active' => 1,
-        ]);
+        $this->assertSame(3, $result->citiesCreated);
+        $this->assertSame(1, CourierState::query()->where('courier_id', $courier->id)->count());
+        $this->assertSame(3, CourierCity::query()->where('courier_id', $courier->id)->count());
 
         $state = CourierState::query()
             ->where('courier_id', $courier->id)
-            ->where('external_id', '5')
+            ->where('external_id', '6')
             ->first();
         $this->assertNotNull($state);
+        $this->assertSame('Galle', $state->name);
 
-        $city = CourierCity::query()
+        $cities = CourierCity::query()
+            ->where('courier_id', $courier->id)
+            ->orderBy('external_id')
+            ->get();
+        $this->assertSame(['5 Kanuwa', '6 Kanuwa', 'Adadola'], $cities->pluck('name')->all());
+        $this->assertTrue($cities->every(fn (CourierCity $city) => $city->courier_state_id === $state->id));
+    }
+
+    public function test_provider_ids_are_preserved(): void
+    {
+        $courier = $this->makeFardarCourier();
+        $path = $this->writeCsv([
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['176', 'Warapitiya', '3', 'Outstation', '1', 'Ampara'],
+        ]);
+
+        $this->sync->importFromCsv($courier, $path);
+
+        $this->assertDatabaseHas('courier_states', [
+            'courier_id' => $courier->id,
+            'external_id' => '1',
+            'name' => 'Ampara',
+        ]);
+        $this->assertDatabaseHas('courier_cities', [
+            'courier_id' => $courier->id,
+            'external_id' => '176',
+            'name' => 'Warapitiya',
+            'city_name' => 'Warapitiya',
+            'district_name' => 'Ampara',
+            'external_city_code' => '176',
+            'external_district_code' => '1',
+        ]);
+    }
+
+    public function test_multiple_districts_create_separate_states(): void
+    {
+        $courier = $this->makeFardarCourier();
+        $path = $this->writeCsv([
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['176', 'Warapitiya', '3', 'Outstation', '1', 'Ampara'],
+            ['1464', 'Mawela', '3', 'Outstation', '11', 'Kandy'],
+            ['2830', 'Kelanimulla', '2', 'Suburbs', '5', 'Colombo'],
+            ['5373', 'Uduthuththiripitiya', '3', 'Outstation', '7', 'Gampaha'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
+        ]);
+
+        $result = $this->sync->importFromCsv($courier, $path);
+
+        $this->assertSame(0, $result->errors);
+        $this->assertSame(5, $result->statesCreated);
+        $this->assertSame(5, $result->citiesCreated);
+
+        $names = CourierState::query()
+            ->where('courier_id', $courier->id)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        $this->assertSame(['Ampara', 'Colombo', 'Galle', 'Gampaha', 'Kandy'], $names);
+    }
+
+    public function test_city_associated_by_district_id_not_name(): void
+    {
+        $courier = $this->makeFardarCourier();
+        $path = $this->writeCsv([
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['176', 'Warapitiya', '3', 'Outstation', '1', 'Ampara'],
+            ['6300', 'Galagedarah Homagama', '3', 'Outstation', '5', 'Colombo'],
+        ]);
+
+        $this->sync->importFromCsv($courier, $path);
+
+        $ampara = CourierState::query()
             ->where('courier_id', $courier->id)
             ->where('external_id', '1')
             ->first();
-        $this->assertNotNull($city);
-        $this->assertSame($state->id, $city->courier_state_id);
+        $colombo = CourierState::query()
+            ->where('courier_id', $courier->id)
+            ->where('external_id', '5')
+            ->first();
+        $this->assertNotNull($ampara);
+        $this->assertNotNull($colombo);
+
+        $warapitiya = CourierCity::query()
+            ->where('courier_id', $courier->id)
+            ->where('external_id', '176')
+            ->first();
+        $homagama = CourierCity::query()
+            ->where('courier_id', $courier->id)
+            ->where('external_id', '6300')
+            ->first();
+
+        $this->assertNotNull($warapitiya);
+        $this->assertNotNull($homagama);
+        $this->assertSame($ampara->id, $warapitiya->courier_state_id);
+        $this->assertSame($colombo->id, $homagama->courier_state_id);
     }
 
     public function test_reimport_does_not_create_duplicates(): void
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
-            ['5', 'Colombo', '2', 'Akuregoda'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
+            ['2', '6 Kanuwa', '3', 'Outstation', '6', 'Galle'],
         ]);
 
         $first = $this->sync->importFromCsv($courier, $path);
@@ -125,14 +204,14 @@ class FardarLocationImportTest extends TestCase
     {
         $courier = $this->makeFardarCourier();
         $initial = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita', '2', 'Suburbs', '5', 'Colombo'],
         ]);
         $this->sync->importFromCsv($courier, $initial);
 
         $updated = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo Metro', '1', 'Akarawita North'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita North', '2', 'Suburbs', '5', 'Colombo Metro'],
         ]);
         $result = $this->sync->importFromCsv($courier, $updated);
 
@@ -159,15 +238,15 @@ class FardarLocationImportTest extends TestCase
     {
         $courier = $this->makeFardarCourier();
         $initial = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
-            ['10', 'Gampaha', '99', 'Placeholder'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita', '2', 'Suburbs', '5', 'Colombo'],
+            ['99', 'Placeholder', '3', 'Outstation', '10', 'Gampaha'],
         ]);
         $this->sync->importFromCsv($courier, $initial);
 
         $moved = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['10', 'Gampaha', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita', '3', 'Outstation', '10', 'Gampaha'],
         ]);
         $result = $this->sync->importFromCsv($courier, $moved);
 
@@ -189,12 +268,12 @@ class FardarLocationImportTest extends TestCase
         $this->assertSame('10', $city->external_district_code);
     }
 
-    public function test_external_ids_are_preserved_as_strings(): void
+    public function test_external_ids_normalize_leading_zeros(): void
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['05', 'Colombo', '01', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['01', 'Akarawita', '02', 'Suburbs', '05', 'Colombo'],
         ]);
 
         $this->sync->importFromCsv($courier, $path);
@@ -215,15 +294,15 @@ class FardarLocationImportTest extends TestCase
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
-            ['', 'Colombo', '2', 'Akuregoda'],
-            ['5', '', '3', 'Angoda'],
-            ['5', 'Colombo', '', 'Athurugiriya'],
-            ['5', 'Colombo', '4', ''],
-            ['abc', 'Colombo', '5', 'Avissawella'],
-            ['5', 'Colombo', 'xyz', 'Badulla'],
-            ['', '', '', ''],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita', '2', 'Suburbs', '5', 'Colombo'],
+            ['2', 'Akuregoda', '2', 'Suburbs', '', 'Colombo'],
+            ['3', 'Angoda', '2', 'Suburbs', '5', ''],
+            ['', 'Athurugiriya', '2', 'Suburbs', '5', 'Colombo'],
+            ['4', '', '2', 'Suburbs', '5', 'Colombo'],
+            ['5', 'Avissawella', '2', 'Suburbs', 'abc', 'Colombo'],
+            ['xyz', 'Badulla', '2', 'Suburbs', '5', 'Colombo'],
+            ['', '', '', '', '', ''],
         ]);
 
         $result = $this->sync->importFromCsv($courier, $path);
@@ -243,9 +322,9 @@ class FardarLocationImportTest extends TestCase
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
-            ['5', 'Colombo', '1', 'Akarawita Updated'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', 'Akarawita', '2', 'Suburbs', '5', 'Colombo'],
+            ['1', 'Akarawita Updated', '2', 'Suburbs', '5', 'Colombo'],
         ]);
 
         $result = $this->sync->importFromCsv($courier, $path);
@@ -260,7 +339,7 @@ class FardarLocationImportTest extends TestCase
         ]);
     }
 
-    public function test_import_does_not_affect_royal_or_transexpress_locations(): void
+    public function test_import_does_not_affect_royal_or_transexpress_locations_with_similar_names(): void
     {
         $fardar = $this->makeFardarCourier();
         $royal = Courier::query()->updateOrCreate(
@@ -275,25 +354,25 @@ class FardarLocationImportTest extends TestCase
         $royalState = CourierState::query()->updateOrCreate(
             [
                 'courier_id' => $royal->id,
-                'external_id' => 'iso-royal-5',
+                'external_id' => 'iso-royal-galle',
             ],
             [
-                'name' => 'Royal Isolation State',
+                'name' => 'Galle',
                 'is_active' => true,
             ]
         );
         CourierCity::query()->updateOrCreate(
             [
                 'courier_id' => $royal->id,
-                'external_id' => 'iso-royal-1',
+                'external_id' => 'iso-royal-kanuwa',
             ],
             [
                 'courier_state_id' => $royalState->id,
-                'name' => 'Royal Isolation City',
-                'city_name' => 'Royal Isolation City',
-                'district_name' => 'Royal Isolation State',
-                'external_city_code' => 'iso-royal-1',
-                'external_district_code' => 'iso-royal-5',
+                'name' => '5 Kanuwa',
+                'city_name' => '5 Kanuwa',
+                'district_name' => 'Galle',
+                'external_city_code' => 'iso-royal-kanuwa',
+                'external_district_code' => 'iso-royal-galle',
                 'is_active' => true,
             ]
         );
@@ -301,25 +380,25 @@ class FardarLocationImportTest extends TestCase
         $txState = CourierState::query()->updateOrCreate(
             [
                 'courier_id' => $transexpress->id,
-                'external_id' => 'iso-tx-5',
+                'external_id' => 'iso-tx-galle',
             ],
             [
-                'name' => 'TX Isolation State',
+                'name' => 'Galle',
                 'is_active' => true,
             ]
         );
         CourierCity::query()->updateOrCreate(
             [
                 'courier_id' => $transexpress->id,
-                'external_id' => 'iso-tx-1',
+                'external_id' => 'iso-tx-kanuwa',
             ],
             [
                 'courier_state_id' => $txState->id,
-                'name' => 'TX Isolation City',
-                'city_name' => 'TX Isolation City',
-                'district_name' => 'TX Isolation State',
-                'external_city_code' => 'iso-tx-1',
-                'external_district_code' => 'iso-tx-5',
+                'name' => '5 Kanuwa',
+                'city_name' => '5 Kanuwa',
+                'district_name' => 'Galle',
+                'external_city_code' => 'iso-tx-kanuwa',
+                'external_district_code' => 'iso-tx-galle',
                 'is_active' => true,
             ]
         );
@@ -330,8 +409,8 @@ class FardarLocationImportTest extends TestCase
         $txCitiesBefore = CourierCity::query()->where('courier_id', $transexpress->id)->count();
 
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
         ]);
         $this->sync->importFromCsv($fardar, $path);
 
@@ -343,23 +422,101 @@ class FardarLocationImportTest extends TestCase
         $this->assertSame($txCitiesBefore, CourierCity::query()->where('courier_id', $transexpress->id)->count());
         $this->assertDatabaseHas('courier_states', [
             'courier_id' => $royal->id,
-            'external_id' => 'iso-royal-5',
-            'name' => 'Royal Isolation State',
+            'external_id' => 'iso-royal-galle',
+            'name' => 'Galle',
         ]);
         $this->assertDatabaseHas('courier_states', [
             'courier_id' => $transexpress->id,
-            'external_id' => 'iso-tx-5',
-            'name' => 'TX Isolation State',
+            'external_id' => 'iso-tx-galle',
+            'name' => 'Galle',
         ]);
         $this->assertDatabaseHas('courier_cities', [
             'courier_id' => $royal->id,
-            'external_id' => 'iso-royal-1',
-            'name' => 'Royal Isolation City',
+            'external_id' => 'iso-royal-kanuwa',
+            'name' => '5 Kanuwa',
         ]);
         $this->assertDatabaseHas('courier_cities', [
             'courier_id' => $transexpress->id,
-            'external_id' => 'iso-tx-1',
-            'name' => 'TX Isolation City',
+            'external_id' => 'iso-tx-kanuwa',
+            'name' => '5 Kanuwa',
+        ]);
+        $this->assertDatabaseHas('courier_cities', [
+            'courier_id' => $fardar->id,
+            'external_id' => '1',
+            'name' => '5 Kanuwa',
+            'external_district_code' => '6',
+        ]);
+    }
+
+    public function test_csv_parsing_handles_quotes_utf8_whitespace_blank_lines_and_crlf(): void
+    {
+        $courier = $this->makeFardarCourier();
+
+        $csv = "city_id,city_name,zone_id,zone name,district_id,district name\r\n"
+            ."1,\"5 Kanuwa\",3,Outstation,6,Galle\r\n"
+            ."\r\n"
+            ."  2  ,  6 Kanuwa  ,  3  ,  Outstation  ,  6  ,  Galle  \r\n"
+            ."3,කොළඹ උතුර,2,Suburbs,5,Colombo\r\n"
+            ."3,කොළඹ උතුර,2,Suburbs,5,Colombo\r\n";
+
+        $path = $this->writeRawCsv($csv);
+        $result = $this->sync->importFromCsv($courier, $path);
+
+        $this->assertSame(0, $result->errors);
+        $this->assertSame(2, $result->rowsSkipped);
+        $this->assertSame(2, $result->statesCreated);
+        $this->assertSame(3, $result->citiesCreated);
+
+        $this->assertDatabaseHas('courier_cities', [
+            'courier_id' => $courier->id,
+            'external_id' => '1',
+            'name' => '5 Kanuwa',
+        ]);
+        $this->assertDatabaseHas('courier_cities', [
+            'courier_id' => $courier->id,
+            'external_id' => '2',
+            'name' => '6 Kanuwa',
+        ]);
+        $this->assertDatabaseHas('courier_cities', [
+            'courier_id' => $courier->id,
+            'external_id' => '3',
+            'name' => 'කොළඹ උතුර',
+        ]);
+    }
+
+    public function test_zones_are_not_persisted(): void
+    {
+        $courier = $this->makeFardarCourier();
+        $path = $this->writeCsv([
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['2830', 'Kelanimulla', '2', 'Suburbs', '5', 'Colombo'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
+        ]);
+
+        $this->sync->importFromCsv($courier, $path);
+
+        $this->assertDatabaseMissing('courier_states', [
+            'courier_id' => $courier->id,
+            'name' => 'Suburbs',
+        ]);
+        $this->assertDatabaseMissing('courier_states', [
+            'courier_id' => $courier->id,
+            'name' => 'Outstation',
+        ]);
+        $this->assertDatabaseMissing('courier_states', [
+            'courier_id' => $courier->id,
+            'external_id' => '2',
+            'name' => 'Suburbs',
+        ]);
+        $this->assertDatabaseHas('courier_states', [
+            'courier_id' => $courier->id,
+            'external_id' => '5',
+            'name' => 'Colombo',
+        ]);
+        $this->assertDatabaseHas('courier_states', [
+            'courier_id' => $courier->id,
+            'external_id' => '6',
+            'name' => 'Galle',
         ]);
     }
 
@@ -367,17 +524,18 @@ class FardarLocationImportTest extends TestCase
     {
         $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'district name', 'city id', 'city name'],
-            ['5', 'Colombo', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id', 'zone name', 'district_id', 'district name'],
+            ['1', '5 Kanuwa', '3', 'Outstation', '6', 'Galle'],
         ]);
 
         $this->artisan('courier:import-locations', [
             'courier' => 'FARDAR',
             'file' => $path,
         ])
-            ->expectsOutputToContain('Fardar location import completed.')
-            ->expectsOutputToContain('Districts created: 1')
-            ->expectsOutputToContain('Cities created: 1')
+            ->expectsOutputToContain('FARDAR LOCATION IMPORT')
+            ->expectsOutputToContain('FARDAR DATABASE TOTALS')
+            ->expectsOutputToContain('States: 1')
+            ->expectsOutputToContain('Cities: 1')
             ->assertSuccessful();
     }
 
@@ -395,8 +553,8 @@ class FardarLocationImportTest extends TestCase
     {
         $courier = $this->makeFardarCourier();
         $path = $this->writeCsv([
-            ['district id', 'city id', 'city name'],
-            ['5', '1', 'Akarawita'],
+            ['city_id', 'city_name', 'zone_id'],
+            ['1', '5 Kanuwa', '3'],
         ]);
 
         $this->expectException(\RuntimeException::class);
@@ -442,6 +600,17 @@ class FardarLocationImportTest extends TestCase
         }
 
         fclose($handle);
+        $this->tempFiles[] = $path;
+
+        return $path;
+    }
+
+    private function writeRawCsv(string $contents): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'fardar_raw_');
+        $this->assertNotFalse($path);
+
+        file_put_contents($path, $contents);
         $this->tempFiles[] = $path;
 
         return $path;
