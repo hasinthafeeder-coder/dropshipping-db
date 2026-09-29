@@ -139,6 +139,12 @@ class RolePermissionSeeder extends Seeder
             'grns.update',
             'grns.delete',
             'stock.view',
+            'orders.view',
+            'orders.send-to-print',
+            'orders.print',
+            'orders.send-to-packing',
+            'orders.pack',
+            'orders.cancel',
         ]);
     }
 

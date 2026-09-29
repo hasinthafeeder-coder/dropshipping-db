@@ -53,9 +53,9 @@ trait SetsUpMarketData
         }
 
         $markets = [
-            ['code' => 'lk', 'name' => 'Sri Lanka', 'country_iso_code' => 'LK', 'currency_iso_code' => 'LKR', 'is_active' => true],
-            ['code' => 'my', 'name' => 'Malaysia', 'country_iso_code' => 'MY', 'currency_iso_code' => 'MYR', 'is_active' => true],
-            ['code' => 'th', 'name' => 'Thailand', 'country_iso_code' => 'TH', 'currency_iso_code' => 'THB', 'is_active' => false],
+            ['code' => 'lk', 'name' => 'Sri Lanka', 'country_iso_code' => 'LK', 'currency_iso_code' => 'LKR', 'market_number' => 1, 'is_active' => true],
+            ['code' => 'my', 'name' => 'Malaysia', 'country_iso_code' => 'MY', 'currency_iso_code' => 'MYR', 'market_number' => 2, 'is_active' => true],
+            ['code' => 'th', 'name' => 'Thailand', 'country_iso_code' => 'TH', 'currency_iso_code' => 'THB', 'market_number' => null, 'is_active' => false],
         ];
 
         foreach ($markets as $market) {
@@ -66,16 +66,21 @@ trait SetsUpMarketData
                 continue;
             }
 
-            Market::query()->firstOrCreate(
+            $row = Market::query()->firstOrCreate(
                 ['code' => $market['code']],
                 [
                     'uuid' => UuidService::generate(),
                     'name' => $market['name'],
                     'country_id' => $countryId,
                     'currency_id' => $currencyId,
+                    'market_number' => $market['market_number'],
                     'is_active' => $market['is_active'],
                 ]
             );
+
+            if ($row->market_number !== $market['market_number']) {
+                $row->forceFill(['market_number' => $market['market_number']])->save();
+            }
         }
 
         $this->seedMarketDefaultCommissions();

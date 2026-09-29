@@ -282,6 +282,19 @@ class PermissionSeeder extends Seeder
                     ],
                 ],
 
+                [
+                    'module' => 'Orders',
+                    'group' => 'Orders',
+                    'permissions' => [
+                        ['View Orders', 'orders.view'],
+                        ['Send Orders to Print', 'orders.send-to-print'],
+                        ['Print Orders', 'orders.print'],
+                        ['Send Orders to Packing', 'orders.send-to-packing'],
+                        ['Pack Orders', 'orders.pack'],
+                        ['Cancel Orders', 'orders.cancel'],
+                    ],
+                ],
+
             ],
 
         ];

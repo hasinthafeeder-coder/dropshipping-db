@@ -1049,7 +1049,7 @@ class DummyOrderSeeder extends Seeder
             'Sellable variant pool size: '.$variantPoolSize,
             'Eligible CCAs: '.$ccas->count(),
             '',
-            'Note: OrderStatus has no PROCESSING/SHIPPED/DELIVERED/RETURNED — used real enum values only.',
+            'Note: OrderStatus lifecycle is PENDING → attempts → HOLD → CONFIRMED → PRINT → PRINTED → PACKING → DISPATCHED (plus CANCELLED).',
             'Note: No shipments created (no external courier API calls).',
             '',
         ]);

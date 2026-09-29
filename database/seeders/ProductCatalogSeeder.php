@@ -116,7 +116,7 @@ class ProductCatalogSeeder extends Seeder
 
                         $variants[] = [
                             'name' => $variantName,
-                            'barcode' => $this->buildBarcode($marketCode, (int) $supplier->id, $sequence, $variantOrder),
+                            'barcode' => '',
                             'cost' => $pricing['cost'],
                             'selling_price' => $pricing['selling_price'],
                             'suggested_price' => $pricing['suggested_price'],
@@ -466,17 +466,6 @@ class ProductCatalogSeeder extends Seeder
             $marketCode,
             $supplierId,
             $sequence
-        );
-    }
-
-    private function buildBarcode(string $marketCode, int $supplierId, int $sequence, int $variantOrder): string
-    {
-        return sprintf(
-            'SEED%s%s%04d%02d',
-            strtoupper($marketCode),
-            str_pad((string) $supplierId, 4, '0', STR_PAD_LEFT),
-            $sequence,
-            $variantOrder
         );
     }
 

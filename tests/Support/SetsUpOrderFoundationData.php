@@ -183,7 +183,7 @@ trait SetsUpOrderFoundationData
             'uuid' => (string) Str::uuid(),
             'product_id' => $product->id,
             'name' => 'Default',
-            'barcode' => 'BC'.Str::upper(Str::random(10)),
+            'barcode' => '',
             'cost' => 100.00,
             'selling_price' => 250.00,
             'weight' => 0.500,

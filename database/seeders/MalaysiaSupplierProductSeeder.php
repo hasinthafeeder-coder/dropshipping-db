@@ -164,7 +164,7 @@ class MalaysiaSupplierProductSeeder extends Seeder
                 [
                     [
                         'name' => 'Standard',
-                        'barcode' => sprintf('MY-%04d-STD', $sequence),
+                        'barcode' => '',
                         'cost' => $supplierData['cost'],
                         'selling_price' => $supplierData['selling'],
                         'suggested_price' => round($supplierData['selling'] * 1.15, 2),

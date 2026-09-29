@@ -8,6 +8,7 @@ use Feeder\Core\Models\CustomerPhone;
 use Feeder\Core\Services\Order\CustomerIdentityService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Tests\Support\SetsUpOrderFoundationData;
 use Tests\TestCase;
 
@@ -114,6 +115,31 @@ class CustomerIdentityFoundationTest extends TestCase
         $this->assertSame(1, Customer::query()->count());
         $this->assertSame(2, CustomerPhone::query()->where('customer_id', $result['customer']->id)->count());
         $this->assertNotNull($result['secondary_phone']);
+    }
+
+    public function test_same_primary_and_secondary_phone_returns_validation_error(): void
+    {
+        $service = app(CustomerIdentityService::class);
+        $countryId = $this->countryByIso('LK')->id;
+        $beforeCustomers = Customer::query()->count();
+        $beforePhones = CustomerPhone::query()->count();
+
+        try {
+            $service->resolveOrCreate([
+                'display_name' => 'Same Phone Customer',
+                'primary_country_id' => $countryId,
+                'primary_phone' => '0715555666',
+                'primary_phone_country_id' => $countryId,
+                'secondary_phone' => '0715555666',
+                'secondary_phone_country_id' => $countryId,
+            ]);
+            $this->fail('Expected ValidationException for identical primary and secondary phones.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('secondary_phone', $exception->errors());
+        }
+
+        $this->assertSame($beforeCustomers, Customer::query()->count());
+        $this->assertSame($beforePhones, CustomerPhone::query()->count());
     }
 
     public function test_conflicting_phone_identities_are_detected(): void

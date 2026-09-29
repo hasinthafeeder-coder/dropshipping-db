@@ -568,6 +568,24 @@ class OrderPaymentReviewPhase1Test extends TestCase
                 'draft_courier_service_id' => $setup['service']->id,
                 'draft_courier_city_id' => $setup['city']->id,
             ])->save();
+
+            app(\Feeder\Core\Services\Courier\CourierBookingAdapterResolver::class)->register(
+                $setup['courier']->code,
+                new class implements CourierBookingAdapter
+                {
+                    public function book(
+                        Order $order,
+                        Courier $courier,
+                        CourierService $service,
+                        CourierCity $city,
+                        ?SupplierCourierAccount $account,
+                        float $weightKg,
+                        float $courierFee,
+                    ): array {
+                        return ['tracking_number' => 'WB-PAY-'.((string) $order->id)];
+                    }
+                }
+            );
         }
 
         return [$reseller, $order->fresh(['items'])];
