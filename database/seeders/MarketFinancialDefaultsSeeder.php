@@ -67,5 +67,24 @@ class MarketFinancialDefaultsSeeder extends Seeder
 
             $afterHoursService->setPenaltyAmount($market, $amount);
         }
+
+        foreach (Market::query()->get() as $market) {
+            $afterHoursService->seedDefaultOperatingWindow($market);
+        }
+
+        if (class_exists(\Feeder\Core\Services\Settlement\ResellerNonDeliveryFineSettingsService::class)) {
+            app(\Feeder\Core\Services\Settlement\ResellerNonDeliveryFineSettingsService::class)
+                ->seedApprovedDefaults();
+        }
+
+        if (class_exists(\Feeder\Core\Services\Settlement\ResellerSettlementTransferFeeSettingsService::class)) {
+            app(\Feeder\Core\Services\Settlement\ResellerSettlementTransferFeeSettingsService::class)
+                ->seedApprovedDefaults();
+        }
+
+        if (class_exists(\Feeder\Core\Services\Settlement\SupplierSettlementTransferFeeSettingsService::class)) {
+            app(\Feeder\Core\Services\Settlement\SupplierSettlementTransferFeeSettingsService::class)
+                ->seedApprovedDefaults();
+        }
     }
 }

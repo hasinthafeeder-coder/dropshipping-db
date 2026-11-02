@@ -70,9 +70,32 @@ class RolePermissionSeeder extends Seeder
             'products.create',
             'products.update',
             'products.delete',
+            'products.review',
+            'products.approve',
+            'products.reject',
             'stock.view',
             'settings.view',
             'settings.financial.update',
+            'settlements.suppliers.view',
+            'settlements.suppliers.generate',
+            'settlements.suppliers.lock',
+            'settlements.suppliers.bank_exports.prepare',
+            'settlements.suppliers.payments.record',
+
+            // Reseller settlement: view only for managers (least privilege).
+            // Generate / lock / payment permissions stay super-admin unless explicitly granted.
+            'settlements.resellers.view',
+
+            // Introducer bonus: view only. Generation, payment, and the target
+            // exception stay with super-admin unless explicitly granted.
+            'settlements.introducer_bonus.view',
+
+            // Company expenses: view only. Create and void stay with super-admin
+            // unless explicitly granted.
+            'expenses.view',
+
+            // Read-only financial overview. No settlement or payment actions.
+            'finance.overview.view',
         ]);
 
         /*
@@ -110,7 +133,7 @@ class RolePermissionSeeder extends Seeder
         | Reseller Call Center Agent
         |
         | Operational order access only. Agents may create orders (auto-assigned
-        | to self), view company call-center / ongoing / archived lists, and
+        | to self), view company call-center / ongoing / completed lists, and
         | update status / comments on orders assigned to them.
         | Assignment, discount, and shipment booking stay owner-only.
         |--------------------------------------------------------------------------
@@ -144,6 +167,7 @@ class RolePermissionSeeder extends Seeder
             'orders.print',
             'orders.send-to-packing',
             'orders.pack',
+            'orders.return',
             'orders.cancel',
         ]);
     }

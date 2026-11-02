@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder
                         ['Reject Resellers', 'resellers.reject'],
                         ['Suspend Resellers', 'resellers.suspend'],
                         ['Update Reseller Financial Settings', 'resellers.financial.update'],
+                        ['Update Introducer Bonus Target Exception', 'resellers.introducer_bonus_exception.update'],
                         ['Update Reseller Markets', 'resellers.markets.update'],
                         ['Assign Reseller Suppliers', 'resellers.suppliers.assign'],
                     ],
@@ -128,6 +129,16 @@ class PermissionSeeder extends Seeder
                 ],
 
                 [
+                    'module' => 'Products',
+                    'group' => 'Product Approval',
+                    'permissions' => [
+                        ['Review Products', 'products.review'],
+                        ['Approve Products', 'products.approve'],
+                        ['Reject Products', 'products.reject'],
+                    ],
+                ],
+
+                [
                     'module' => 'Inventory',
                     'group' => 'Stock',
                     'permissions' => [
@@ -141,6 +152,24 @@ class PermissionSeeder extends Seeder
                     'permissions' => [
                         ['View Financial Settings', 'settings.view'],
                         ['Update Financial Settings', 'settings.financial.update'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Finance',
+                    'group' => 'Expenses',
+                    'permissions' => [
+                        ['View Expenses', 'expenses.view'],
+                        ['Create Expenses', 'expenses.create'],
+                        ['Void Expenses', 'expenses.void'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Finance',
+                    'group' => 'Financial Overview',
+                    'permissions' => [
+                        ['View Financial Overview', 'finance.overview.view'],
                     ],
                 ],
 
@@ -169,6 +198,40 @@ class PermissionSeeder extends Seeder
                         ['View Customer Bans', 'customers.bans.view'],
                         ['Create Customer Bans', 'customers.bans.create'],
                         ['Lift Customer Bans', 'customers.bans.lift'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Settlements',
+                    'group' => 'Supplier Settlement',
+                    'permissions' => [
+                        ['View Supplier Settlements', 'settlements.suppliers.view'],
+                        ['Generate Supplier Settlement Batches', 'settlements.suppliers.generate'],
+                        ['Lock Supplier Settlement Batches', 'settlements.suppliers.lock'],
+                        ['Prepare Supplier Settlement Bank Exports', 'settlements.suppliers.bank_exports.prepare'],
+                        ['Record Supplier Settlement Payments', 'settlements.suppliers.payments.record'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Settlements',
+                    'group' => 'Reseller Settlement',
+                    'permissions' => [
+                        ['View Reseller Settlements', 'settlements.resellers.view'],
+                        ['Generate Reseller Settlement Batches', 'settlements.resellers.generate'],
+                        ['Lock Reseller Settlement Batches', 'settlements.resellers.lock'],
+                        ['View Reseller Settlement Payments', 'settlements.resellers.payments.view'],
+                        ['Record Reseller Settlement Payments', 'settlements.resellers.payments.record'],
+                    ],
+                ],
+
+                [
+                    'module' => 'Settlements',
+                    'group' => 'Introducer Bonus',
+                    'permissions' => [
+                        ['View Introducer Bonus Settlements', 'settlements.introducer_bonus.view'],
+                        ['Generate Introducer Bonus Settlements', 'settlements.introducer_bonus.generate'],
+                        ['Record Introducer Bonus Payments', 'settlements.introducer_bonus.payments.record'],
                     ],
                 ],
 
@@ -291,6 +354,7 @@ class PermissionSeeder extends Seeder
                         ['Print Orders', 'orders.print'],
                         ['Send Orders to Packing', 'orders.send-to-packing'],
                         ['Pack Orders', 'orders.pack'],
+                        ['Return Orders', 'orders.return'],
                         ['Cancel Orders', 'orders.cancel'],
                     ],
                 ],

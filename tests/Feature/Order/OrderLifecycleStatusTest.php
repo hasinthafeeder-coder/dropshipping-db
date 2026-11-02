@@ -23,6 +23,8 @@ class OrderLifecycleStatusTest extends TestCase
             'PRINTED',
             'PACKING',
             'DISPATCHED',
+            'DELIVERED',
+            'RETURNED',
             'CANCELLED',
         ], $values);
     }
@@ -37,6 +39,42 @@ class OrderLifecycleStatusTest extends TestCase
         $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::CONFIRMED, OrderStatus::PRINTED));
         $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::PRINT, OrderStatus::PACKING));
         $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::PRINTED, OrderStatus::DISPATCHED));
+    }
+
+    public function test_post_dispatch_outcomes_are_allowed_only_from_dispatched(): void
+    {
+        $this->assertTrue(OrderStatus::canTransitionTo(OrderStatus::DISPATCHED, OrderStatus::DELIVERED));
+        $this->assertTrue(OrderStatus::canTransitionTo(OrderStatus::DISPATCHED, OrderStatus::RETURNED));
+
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::PACKING, OrderStatus::DELIVERED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::PACKING, OrderStatus::RETURNED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::CONFIRMED, OrderStatus::DELIVERED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::PENDING, OrderStatus::RETURNED));
+
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::DELIVERED, OrderStatus::RETURNED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::RETURNED, OrderStatus::DELIVERED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::DELIVERED, OrderStatus::DISPATCHED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::RETURNED, OrderStatus::PACKING));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::DELIVERED, OrderStatus::CANCELLED));
+        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::RETURNED, OrderStatus::CANCELLED));
+    }
+
+    public function test_invalid_transitions_out_of_dispatched_are_rejected(): void
+    {
+        foreach ([
+            OrderStatus::PENDING,
+            OrderStatus::HOLD,
+            OrderStatus::CONFIRMED,
+            OrderStatus::PRINT,
+            OrderStatus::PRINTED,
+            OrderStatus::PACKING,
+            OrderStatus::CANCELLED,
+        ] as $invalidTarget) {
+            $this->assertFalse(
+                OrderStatus::canTransitionTo(OrderStatus::DISPATCHED, $invalidTarget),
+                'DISPATCHED → '.$invalidTarget->value.' must be rejected'
+            );
+        }
     }
 
     public function test_cancellation_allowed_before_dispatch_and_blocked_after(): void
@@ -60,15 +98,17 @@ class OrderLifecycleStatusTest extends TestCase
             $this->assertTrue($statusService->isBeforeDispatch($status));
         }
 
-        $this->assertFalse(OrderStatus::DISPATCHED->canCancel());
-        $this->assertFalse(OrderStatus::canTransitionTo(OrderStatus::DISPATCHED, OrderStatus::CANCELLED));
-        $this->assertFalse($statusService->canCancel(OrderStatus::DISPATCHED));
-        $this->assertFalse($statusService->isBeforeDispatch(OrderStatus::DISPATCHED));
+        foreach ([OrderStatus::DISPATCHED, OrderStatus::DELIVERED, OrderStatus::RETURNED] as $postDispatch) {
+            $this->assertFalse($postDispatch->canCancel(), $postDispatch->value.' must not be cancellable');
+            $this->assertFalse(OrderStatus::canTransitionTo($postDispatch, OrderStatus::CANCELLED));
+            $this->assertFalse($statusService->canCancel($postDispatch));
+            $this->assertFalse($statusService->isBeforeDispatch($postDispatch));
+        }
 
         $this->assertFalse(OrderStatus::CANCELLED->canCancel());
     }
 
-    public function test_call_center_statuses_exclude_supplier_fulfillment_statuses(): void
+    public function test_call_center_statuses_exclude_supplier_fulfillment_and_post_dispatch_outcomes(): void
     {
         $values = OrderStatus::callCenterStatusValues();
 
@@ -77,6 +117,10 @@ class OrderLifecycleStatusTest extends TestCase
         $this->assertNotContains(OrderStatus::PRINTED->value, $values);
         $this->assertNotContains(OrderStatus::PACKING->value, $values);
         $this->assertNotContains(OrderStatus::DISPATCHED->value, $values);
+        $this->assertNotContains(OrderStatus::DELIVERED->value, $values);
+        $this->assertNotContains(OrderStatus::RETURNED->value, $values);
         $this->assertContains(OrderStatus::CANCELLED->value, OrderStatus::callCenterActionableStatusValues());
+        $this->assertNotContains(OrderStatus::DELIVERED->value, OrderStatus::callCenterActionableStatusValues());
+        $this->assertNotContains(OrderStatus::RETURNED->value, OrderStatus::callCenterActionableStatusValues());
     }
 }

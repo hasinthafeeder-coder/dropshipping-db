@@ -279,6 +279,65 @@ class OrderDomainHardeningTest extends TestCase
 
         $this->assertTrue($order->after_hours);
         $this->assertSame('175.50', $order->after_hours_penalty_amount);
+
+        $service->setOperatingWindow($market, '08:00', '18:00');
+        $withinCustom = $service->determine(
+            $market,
+            CarbonImmutable::parse('2026-09-07 19:00:00', $tz)->utc(),
+        );
+        $this->assertTrue($withinCustom['after_hours']);
+        $this->assertSame('08:00', $withinCustom['operating_start']);
+        $this->assertSame('18:00', $withinCustom['operating_end']);
+
+        $service->setOperatingWindow($market, AfterHoursDeterminationService::OPERATING_START, AfterHoursDeterminationService::OPERATING_END);
+    }
+
+    public function test_confirmation_reevaluates_after_hours_from_confirm_time_not_create_time(): void
+    {
+        $market = $this->marketByCode('lk');
+        $tz = app(AfterHoursDeterminationService::class)->resolveTimezone($market);
+
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-07 10:00:00', $tz)->utc());
+        try {
+            $order = $this->createReadyOrder();
+            $this->assertFalse((bool) $order->after_hours);
+
+            CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-07 22:00:00', $tz)->utc());
+            $confirmed = app(OrderStatusService::class)->transition(
+                $order,
+                OrderStatus::CONFIRMED,
+                $order->reseller_id,
+                $order->reseller_company_id,
+                'Confirm after hours',
+            );
+
+            $this->assertTrue((bool) $confirmed->after_hours);
+            $this->assertTrue((bool) $confirmed->after_hours_warning_shown);
+            $this->assertGreaterThan(0, (float) $confirmed->after_hours_penalty_amount);
+            $this->assertNotNull($confirmed->confirmed_at);
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-08 22:00:00', $tz)->utc());
+        try {
+            $lateCreate = $this->createReadyOrder();
+            $this->assertTrue((bool) $lateCreate->after_hours);
+
+            CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-08 14:00:00', $tz)->utc());
+            $dayConfirm = app(OrderStatusService::class)->transition(
+                $lateCreate,
+                OrderStatus::CONFIRMED,
+                $lateCreate->reseller_id,
+                $lateCreate->reseller_company_id,
+                'Confirm during office hours',
+            );
+
+            $this->assertFalse((bool) $dayConfirm->after_hours);
+            $this->assertSame(0.0, (float) $dayConfirm->after_hours_penalty_amount);
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 
     public function test_duplicate_detection_override_cancelled_and_phones(): void
@@ -299,6 +358,18 @@ class OrderDomainHardeningTest extends TestCase
                 'primary_phone_country_id' => $countryId,
             ],
         ]);
+
+        // Non-DISPATCHED matches must not trigger the duplicate warning.
+        $this->createOrderPayload($reseller, $supplier, $variantA, [
+            'customer' => [
+                'display_name' => 'Dup Cust',
+                'primary_country_id' => $countryId,
+                'primary_phone' => $phone,
+                'primary_phone_country_id' => $countryId,
+            ],
+        ]);
+
+        $first->forceFill(['status' => OrderStatus::DISPATCHED])->save();
 
         try {
             $this->createOrderPayload($reseller, $supplier, $variantA, [
@@ -336,8 +407,8 @@ class OrderDomainHardeningTest extends TestCase
         ]);
         $this->assertFalse($differentVariant->duplicate_warning_overridden);
 
-        app(OrderStatusService::class)->transition($first, OrderStatus::CANCELLED, $reseller->id, $reseller->company_id);
-        app(OrderStatusService::class)->transition($overridden, OrderStatus::CANCELLED, $reseller->id, $reseller->company_id);
+        $first->forceFill(['status' => OrderStatus::CANCELLED])->save();
+        $overridden->forceFill(['status' => OrderStatus::CANCELLED])->save();
 
         $afterCancel = $this->createOrderPayload($reseller, $supplier, $variantA, [
             'customer' => [
@@ -358,7 +429,7 @@ class OrderDomainHardeningTest extends TestCase
         $variant = $this->makeSupplierProductVariant($supplier)['variant'];
         $countryId = $this->countryByIso('LK')->id;
 
-        $this->createOrderPayload($reseller, $supplier, $variant, [
+        $primary = $this->createOrderPayload($reseller, $supplier, $variant, [
             'customer' => [
                 'display_name' => 'Primary',
                 'primary_country_id' => $countryId,
@@ -368,6 +439,7 @@ class OrderDomainHardeningTest extends TestCase
                 'secondary_phone_country_id' => $countryId,
             ],
         ]);
+        $primary->forceFill(['status' => OrderStatus::DISPATCHED])->save();
 
         try {
             $this->createOrderPayload($reseller, $supplier, $variant, [

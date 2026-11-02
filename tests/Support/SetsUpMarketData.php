@@ -129,6 +129,16 @@ trait SetsUpMarketData
                 $afterHoursService->setPenaltyAmount($market, $amount);
             }
         }
+
+        if (class_exists(\Feeder\Core\Services\Settlement\ResellerNonDeliveryFineSettingsService::class)) {
+            app(\Feeder\Core\Services\Settlement\ResellerNonDeliveryFineSettingsService::class)
+                ->seedApprovedDefaults();
+        }
+
+        if (class_exists(\Feeder\Core\Services\Settlement\ResellerSettlementTransferFeeSettingsService::class)) {
+            app(\Feeder\Core\Services\Settlement\ResellerSettlementTransferFeeSettingsService::class)
+                ->seedApprovedDefaults();
+        }
     }
 
     protected function seedMarketDefaultCommissions(): void
